@@ -145,7 +145,7 @@ jobs:
   docker-build-push:
     name: Docker Build & Push
     runs-on: ubuntu-latest
-    needs: [lint, test, train-model]
+    needs: [lint, test, model-validation]  # Run AFTER model validation
     permissions:
       contents: read
       packages: write
@@ -194,14 +194,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Job 5: Model Validation (validates the committed model)
+  # Job 5: Model Validation (validates the trained model before Docker build)
   model-validation:
     name: Model Validation
     runs-on: ubuntu-latest
-    needs: test
+    needs: train-model  # Run AFTER training
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Download trained model
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model
+          path: models/
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -231,6 +237,40 @@ jobs:
           print('✅ Model loaded successfully')
           print(f'Config: {checkpoint.get(\"config\", {})}')
           print(f'Epoch: {checkpoint.get(\"epoch\", \"N/A\")}')
-          print(f'Val Accuracy: {checkpoint.get(\"val_accuracy\", \"N/A\")}')
+          val_acc = checkpoint.get('val_accuracy', 0)
+          print(f'Val Accuracy: {val_acc}')
+
+          # Quality gate: accuracy must be > 0 (model trained)
+          assert val_acc > 0, f'Model accuracy {val_acc} is invalid'
+          print('✅ Model accuracy check passed')
+          "
+
+      - name: Test model inference
+        run: |
+          python -c "
+          import torch
+          from PIL import Image
+          import io
+
+          # Load model
+          from src.models.cnn import SimpleCNN
+          checkpoint = torch.load('models/best_model.pt', map_location='cpu')
+          model = SimpleCNN()
+          model.load_state_dict(checkpoint['model_state_dict'])
+          model.eval()
+
+          # Create dummy image and test inference
+          from src.data.preprocessing import get_val_transforms
+          transform = get_val_transforms(224)
+          dummy_image = Image.new('RGB', (224, 224), color='red')
+          input_tensor = transform(dummy_image).unsqueeze(0)
+
+          with torch.no_grad():
+              output = model(input_tensor)
+              prediction = torch.sigmoid(output).item()
+
+          print(f'✅ Inference test passed')
+          print(f'   Prediction: {prediction:.4f}')
+          print(f'   Class: {\"dog\" if prediction > 0.5 else \"cat\"}')
           "
 
