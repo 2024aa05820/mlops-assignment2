@@ -4,13 +4,13 @@
 data:
   raw_dir: "data/raw"
   processed_dir: "data/processed"
-  image_size: 128  # Smaller images = faster training
+  image_size: 224  # Standard CNN input size (as per assignment)
   batch_size: 128  # Larger batch for efficiency
   num_workers: 4   # Parallel data loading
   train_split: 0.8
   val_split: 0.1
   test_split: 0.1
-  # For quick demo, use subset of data
+  # For quick demo, use subset of data (remove these for full training)
   max_train_samples: 2000  # Use only 2000 training samples
   max_val_samples: 500     # Use only 500 validation samples
 
