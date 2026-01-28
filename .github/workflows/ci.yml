@@ -1,0 +1,143 @@
+# CI Pipeline for Cats vs Dogs Classification
+# M3: CI Pipeline - GitHub Actions
+
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.11"
+  DOCKER_IMAGE: cats-dogs-api
+
+jobs:
+  # Job 1: Linting and Code Quality
+  lint:
+    name: Lint & Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install linting tools
+        run: |
+          pip install flake8 black isort
+
+      - name: Run flake8
+        run: |
+          flake8 src/ --max-line-length=120 --ignore=E501,W503,E203
+
+      - name: Check black formatting
+        run: |
+          black --check --line-length=120 src/ || true
+
+      - name: Check import sorting
+        run: |
+          isort --check-only src/ || true
+
+  # Job 2: Unit Tests
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov httpx
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  # Job 3: Docker Build
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Job 4: Model Validation
+  model-validation:
+    name: Model Validation
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate model file exists
+        run: |
+          if [ -f "models/best_model.pt" ]; then
+            echo "✅ Model file exists"
+            ls -lh models/best_model.pt
+          else
+            echo "❌ Model file not found"
+            exit 1
+          fi
+
+      - name: Validate model can be loaded
+        run: |
+          python -c "
+          import torch
+          checkpoint = torch.load('models/best_model.pt', map_location='cpu')
+          print('✅ Model loaded successfully')
+          print(f'Config: {checkpoint.get(\"config\", {})}')
+          print(f'Epoch: {checkpoint.get(\"epoch\", \"N/A\")}')
+          print(f'Val Accuracy: {checkpoint.get(\"val_accuracy\", \"N/A\")}')
+          "
+
