@@ -90,12 +90,26 @@ source .venv/bin/activate
 
 The dataset is downloaded from: https://www.kaggle.com/datasets/bhavikjikadara/dog-and-cat-classification-dataset
 
+**Option A: Using API Token (Recommended)**
+
 ```bash
 # 1. Go to https://www.kaggle.com/settings
 # 2. Scroll to "API" section
-# 3. Click "Create New Token" - this downloads kaggle.json
+# 3. Click "Create New Token" - copy the token shown
 
-# 4. Move the downloaded file to ~/.kaggle/
+# 4. Set the environment variable
+export KAGGLE_API_TOKEN=your_token_here
+
+# For persistence, add to your shell profile:
+echo 'export KAGGLE_API_TOKEN=your_token_here' >> ~/.bashrc
+# or for zsh:
+echo 'export KAGGLE_API_TOKEN=your_token_here' >> ~/.zshrc
+```
+
+**Option B: Using kaggle.json file**
+
+```bash
+# If kaggle.json was downloaded:
 mkdir -p ~/.kaggle
 mv ~/Downloads/kaggle.json ~/.kaggle/
 chmod 600 ~/.kaggle/kaggle.json

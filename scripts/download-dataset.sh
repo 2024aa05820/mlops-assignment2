@@ -1,7 +1,7 @@
 #!/bin/bash
 # Download and prepare the Cats vs Dogs dataset from Kaggle
 # Dataset: https://www.kaggle.com/datasets/bhavikjikadara/dog-and-cat-classification-dataset
-# Requires: kaggle CLI configured with API key
+# Requires: kaggle CLI configured with API token
 
 set -e
 
@@ -15,27 +15,28 @@ echo "Data directory: ${DATA_DIR}"
 # Check if kaggle CLI is installed
 if ! command -v kaggle &> /dev/null; then
     echo "Error: kaggle CLI not found. Install with: pip install kaggle"
-    echo ""
-    echo "Setup instructions:"
-    echo "1. pip install kaggle"
-    echo "2. Go to https://www.kaggle.com/settings -> API -> Create New Token"
-    echo "3. This downloads kaggle.json"
-    echo "4. mkdir -p ~/.kaggle && mv ~/Downloads/kaggle.json ~/.kaggle/"
-    echo "5. chmod 600 ~/.kaggle/kaggle.json"
     exit 1
 fi
 
-# Check if kaggle credentials exist
-if [ ! -f ~/.kaggle/kaggle.json ]; then
-    echo "Error: Kaggle credentials not found at ~/.kaggle/kaggle.json"
+# Check if kaggle credentials exist (either env var or json file)
+if [ -z "$KAGGLE_API_TOKEN" ] && [ ! -f ~/.kaggle/kaggle.json ]; then
+    echo "Error: Kaggle credentials not found!"
     echo ""
-    echo "Setup instructions:"
-    echo "1. Go to https://www.kaggle.com/settings -> API -> Create New Token"
-    echo "2. This downloads kaggle.json"
-    echo "3. mkdir -p ~/.kaggle && mv ~/Downloads/kaggle.json ~/.kaggle/"
-    echo "4. chmod 600 ~/.kaggle/kaggle.json"
+    echo "Option 1: Set KAGGLE_API_TOKEN environment variable"
+    echo "  1. Go to https://www.kaggle.com/settings -> API -> Create New Token"
+    echo "  2. Copy the API token shown"
+    echo "  3. Run: export KAGGLE_API_TOKEN=your_token_here"
+    echo "  4. Or add to ~/.bashrc or ~/.zshrc for persistence"
+    echo ""
+    echo "Option 2: Use kaggle.json file"
+    echo "  1. Go to https://www.kaggle.com/settings -> API -> Create New Token"
+    echo "  2. Download kaggle.json"
+    echo "  3. mkdir -p ~/.kaggle && mv ~/Downloads/kaggle.json ~/.kaggle/"
+    echo "  4. chmod 600 ~/.kaggle/kaggle.json"
     exit 1
 fi
+
+echo "Kaggle credentials found!"
 
 # Create data directory
 mkdir -p "${DATA_DIR}"
