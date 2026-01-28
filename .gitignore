@@ -87,9 +87,10 @@ models/*.joblib
 mlruns/
 mlartifacts/
 
-# DVC
-/data/raw.dvc
+# DVC lock files (regenerated)
 *.dvc.lock
+
+# Note: .dvc files should be tracked by git (they are pointers to data)
 
 # Logs
 *.log
