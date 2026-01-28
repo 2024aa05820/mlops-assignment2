@@ -1,6 +1,7 @@
-# Core ML Libraries
-torch>=2.2.0
-torchvision>=0.17.0
+# Core ML Libraries (CPU-only - no NVIDIA GPU on this instance)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
 numpy>=1.26.0
 pandas>=2.1.0
 scikit-learn>=1.4.0
@@ -16,7 +17,6 @@ mlflow>=2.10.0
 
 # Data Versioning
 dvc>=3.38.0
-dvc-s3>=3.0.0
 
 # Monitoring & Metrics
 prometheus-client>=0.19.0
@@ -40,4 +40,7 @@ seaborn>=0.13.0
 
 # Logging
 structlog>=24.1.0
+
+# Kaggle for dataset download
+kaggle>=1.6.0
 
