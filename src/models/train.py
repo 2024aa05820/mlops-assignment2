@@ -102,13 +102,18 @@ def validate(
     return avg_loss, accuracy, precision, recall, f1, all_preds, all_labels
 
 
-def save_model(model: nn.Module, path: str, config: dict):
-    """Save model checkpoint."""
+def save_model(model: nn.Module, path: str, config: dict, epoch: int = None, val_accuracy: float = None):
+    """Save model checkpoint with metadata."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    torch.save({
+    checkpoint = {
         'model_state_dict': model.state_dict(),
         'config': config
-    }, path)
+    }
+    if epoch is not None:
+        checkpoint['epoch'] = epoch
+    if val_accuracy is not None:
+        checkpoint['val_accuracy'] = val_accuracy
+    torch.save(checkpoint, path)
     print(f"Model saved to {path}")
 
 
@@ -246,7 +251,7 @@ def main():
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
                 best_epoch = epoch + 1
-                save_model(model, config['api']['model_path'], config)
+                save_model(model, config['api']['model_path'], config, epoch=best_epoch, val_accuracy=val_acc)
                 print(f"New best model saved! (Val Acc: {val_acc:.4f})")
 
         # Generate and log visualizations
