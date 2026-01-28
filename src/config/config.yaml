@@ -1,0 +1,42 @@
+# Cats vs Dogs Classification - Configuration
+
+# Data settings
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  image_size: 224
+  batch_size: 32
+  num_workers: 4
+  train_split: 0.8
+  val_split: 0.1
+  test_split: 0.1
+
+# Model settings
+model:
+  name: "SimpleCNN"
+  num_classes: 2
+  dropout: 0.5
+  
+# Training settings
+training:
+  epochs: 10
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  early_stopping_patience: 3
+  
+# MLflow settings
+mlflow:
+  experiment_name: "cats-dogs-classification"
+  tracking_uri: "mlruns"
+  
+# API settings
+api:
+  host: "0.0.0.0"
+  port: 8000
+  model_path: "models/best_model.pt"
+
+# Logging settings
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
