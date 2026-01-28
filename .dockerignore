@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Data (not needed in container)
+data/
+*.dvc
+
+# MLflow runs (not needed in container)
+mlruns/
+mlartifacts/
+
+# Tests
+tests/
+.pytest_cache
+htmlcov
+.coverage
+
+# Documentation
+*.md
+docs/
+
+# Notebooks
+notebooks/
+*.ipynb
+
+# Scripts (not needed in container)
+scripts/
+
+# Kubernetes configs
+deploy/
+
+# Grafana configs
+grafana/
+
+# Reports (generated at runtime)
+reports/*.png
+
+# Misc
+.DS_Store
+*.log
+*.zip
+*.tar.gz
+
