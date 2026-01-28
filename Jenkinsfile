@@ -109,6 +109,7 @@ api.dataset_download_files('bhavikjikadara/dog-and-cat-classification-dataset', 
                 sh '''
                     python3 -c "
 import torch
+import torch.nn.functional as F
 from PIL import Image
 
 # Load and validate model
@@ -136,10 +137,14 @@ input_tensor = transform(dummy_image).unsqueeze(0)
 
 with torch.no_grad():
     output = model(input_tensor)
-    prediction = torch.sigmoid(output).item()
+    # Model outputs 2 classes: [cat_prob, dog_prob]
+    probs = F.softmax(output, dim=1)
+    predicted_class = torch.argmax(probs, dim=1).item()
+    confidence = probs[0][predicted_class].item()
 
+class_names = ['cat', 'dog']
 print(f'✅ Inference test passed')
-print(f'   Prediction: {prediction:.4f}')
+print(f'   Predicted: {class_names[predicted_class]} (confidence: {confidence:.4f})')
 "
                 '''
             }

@@ -249,8 +249,8 @@ jobs:
         run: |
           python -c "
           import torch
+          import torch.nn.functional as F
           from PIL import Image
-          import io
 
           # Load model
           from src.models.cnn import SimpleCNN
@@ -267,10 +267,15 @@ jobs:
 
           with torch.no_grad():
               output = model(input_tensor)
-              prediction = torch.sigmoid(output).item()
+              # Model outputs 2 classes: [cat_prob, dog_prob]
+              probs = F.softmax(output, dim=1)
+              predicted_class = torch.argmax(probs, dim=1).item()
+              confidence = probs[0][predicted_class].item()
 
+          class_names = ['cat', 'dog']
           print(f'✅ Inference test passed')
-          print(f'   Prediction: {prediction:.4f}')
-          print(f'   Class: {\"dog\" if prediction > 0.5 else \"cat\"}')
+          print(f'   Output shape: {output.shape}')
+          print(f'   Probabilities: cat={probs[0][0]:.4f}, dog={probs[0][1]:.4f}')
+          print(f'   Predicted: {class_names[predicted_class]} (confidence: {confidence:.4f})')
           "
 
