@@ -4,12 +4,15 @@
 data:
   raw_dir: "data/raw"
   processed_dir: "data/processed"
-  image_size: 224
-  batch_size: 64  # Larger batch for CPU efficiency
-  num_workers: 4  # Parallel data loading
+  image_size: 128  # Smaller images = faster training
+  batch_size: 128  # Larger batch for efficiency
+  num_workers: 4   # Parallel data loading
   train_split: 0.8
   val_split: 0.1
   test_split: 0.1
+  # For quick demo, use subset of data
+  max_train_samples: 2000  # Use only 2000 training samples
+  max_val_samples: 500     # Use only 500 validation samples
 
 # Model settings
 model:
@@ -19,7 +22,7 @@ model:
 
 # Training settings
 training:
-  epochs: 5  # Reduced for faster training on CPU
+  epochs: 3  # Quick demo - 3 epochs is enough to show the pipeline
   learning_rate: 0.001
   weight_decay: 0.0001
   early_stopping_patience: 3

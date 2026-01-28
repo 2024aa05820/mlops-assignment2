@@ -106,11 +106,13 @@ def create_data_loaders(
     test_dir: Optional[str] = None,
     batch_size: int = 32,
     num_workers: int = 4,
-    image_size: int = 224
+    image_size: int = 224,
+    max_train_samples: Optional[int] = None,
+    max_val_samples: Optional[int] = None
 ) -> Tuple[DataLoader, DataLoader, Optional[DataLoader]]:
     """
     Create DataLoaders for training, validation, and optionally test sets.
-    
+
     Args:
         train_dir: Path to training data
         val_dir: Path to validation data
@@ -118,7 +120,9 @@ def create_data_loaders(
         batch_size: Batch size for DataLoaders
         num_workers: Number of worker processes
         image_size: Target image size
-        
+        max_train_samples: Limit training samples (for quick demos)
+        max_val_samples: Limit validation samples (for quick demos)
+
     Returns:
         Tuple of (train_loader, val_loader, test_loader)
     """
@@ -128,12 +132,21 @@ def create_data_loaders(
         transform=get_train_transforms(image_size),
         image_size=image_size
     )
-    
+
     val_dataset = CatsDogsDataset(
         val_dir,
         transform=get_val_transforms(image_size),
         image_size=image_size
     )
+
+    # Limit samples for quick demo/testing
+    if max_train_samples and max_train_samples < len(train_dataset):
+        indices = torch.randperm(len(train_dataset))[:max_train_samples].tolist()
+        train_dataset = torch.utils.data.Subset(train_dataset, indices)
+
+    if max_val_samples and max_val_samples < len(val_dataset):
+        indices = torch.randperm(len(val_dataset))[:max_val_samples].tolist()
+        val_dataset = torch.utils.data.Subset(val_dataset, indices)
     
     # Check if CUDA is available for pin_memory optimization
     use_pin_memory = torch.cuda.is_available()

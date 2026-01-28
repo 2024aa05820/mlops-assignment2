@@ -149,11 +149,15 @@ def main():
         train_dir, val_dir, test_dir if os.path.exists(test_dir) else None,
         batch_size=config['data']['batch_size'],
         num_workers=config['data']['num_workers'],
-        image_size=config['data']['image_size']
+        image_size=config['data']['image_size'],
+        max_train_samples=config['data'].get('max_train_samples'),
+        max_val_samples=config['data'].get('max_val_samples')
     )
-    
+
     print(f"Train samples: {len(train_loader.dataset)}")
     print(f"Val samples: {len(val_loader.dataset)}")
+    if config['data'].get('max_train_samples'):
+        print(f"(Using subset for quick demo)")
 
     # Create model
     model = SimpleCNN(
