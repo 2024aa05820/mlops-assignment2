@@ -1,4 +1,4 @@
-.PHONY: help init install download dvc-init dvc-add dvc-push dvc-pull data-setup train serve test lint format docker-build docker-run deploy clean
+.PHONY: help init install clean-reinstall download dvc-init dvc-add dvc-push dvc-pull data-setup train serve test lint format docker-build docker-run deploy clean
 
 # Default target
 help:
@@ -7,6 +7,7 @@ help:
 	@echo "Available commands:"
 	@echo "  make init          - Create virtual environment and install dependencies"
 	@echo "  make install       - Install dependencies only"
+	@echo "  make clean-reinstall - Remove venv and reinstall from scratch"
 	@echo "  make download      - Download dataset from Kaggle"
 	@echo "  make dvc-init      - Initialize DVC"
 	@echo "  make dvc-add       - Add data to DVC tracking"
@@ -24,13 +25,27 @@ help:
 
 # Environment setup
 init:
+	@echo "Creating virtual environment..."
 	python -m venv .venv
+	@echo "Upgrading pip..."
 	. .venv/bin/activate && pip install --upgrade pip
+	@echo "Installing dependencies (CPU-only PyTorch)..."
 	. .venv/bin/activate && pip install -r requirements.txt
-	@echo "Virtual environment created. Activate with: source .venv/bin/activate"
+	@echo ""
+	@echo "✅ Virtual environment created successfully!"
+	@echo "Activate with: source .venv/bin/activate"
 
 install:
 	pip install -r requirements.txt
+
+# Clean reinstall - removes old venv and reinstalls
+clean-reinstall:
+	@echo "Removing old virtual environment..."
+	rm -rf .venv
+	@echo "Clearing pip cache..."
+	pip cache purge || true
+	@echo "Creating fresh virtual environment..."
+	$(MAKE) init
 
 # Data
 download:
