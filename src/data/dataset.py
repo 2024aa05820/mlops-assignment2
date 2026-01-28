@@ -135,23 +135,26 @@ def create_data_loaders(
         image_size=image_size
     )
     
+    # Check if CUDA is available for pin_memory optimization
+    use_pin_memory = torch.cuda.is_available()
+
     # Create DataLoaders
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=use_pin_memory
     )
-    
+
     val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=use_pin_memory
     )
-    
+
     test_loader = None
     if test_dir:
         test_dataset = CatsDogsDataset(
@@ -164,7 +167,7 @@ def create_data_loaders(
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
-            pin_memory=True
+            pin_memory=use_pin_memory
         )
     
     return train_loader, val_loader, test_loader

@@ -5,8 +5,8 @@ data:
   raw_dir: "data/raw"
   processed_dir: "data/processed"
   image_size: 224
-  batch_size: 32
-  num_workers: 4
+  batch_size: 64  # Larger batch for CPU efficiency
+  num_workers: 2  # Reduced for CPU (less overhead)
   train_split: 0.8
   val_split: 0.1
   test_split: 0.1
@@ -16,10 +16,10 @@ model:
   name: "SimpleCNN"
   num_classes: 2
   dropout: 0.5
-  
+
 # Training settings
 training:
-  epochs: 10
+  epochs: 5  # Reduced for faster training on CPU
   learning_rate: 0.001
   weight_decay: 0.0001
   early_stopping_patience: 3
