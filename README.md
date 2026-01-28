@@ -88,11 +88,16 @@ source .venv/bin/activate
 
 #### Step 3: Configure Kaggle API
 
+The dataset is downloaded from: https://www.kaggle.com/datasets/bhavikjikadara/dog-and-cat-classification-dataset
+
 ```bash
-# Create Kaggle API credentials
+# 1. Go to https://www.kaggle.com/settings
+# 2. Scroll to "API" section
+# 3. Click "Create New Token" - this downloads kaggle.json
+
+# 4. Move the downloaded file to ~/.kaggle/
 mkdir -p ~/.kaggle
-# Download kaggle.json from https://www.kaggle.com/account
-# Move it to ~/.kaggle/kaggle.json
+mv ~/Downloads/kaggle.json ~/.kaggle/
 chmod 600 ~/.kaggle/kaggle.json
 ```
 
