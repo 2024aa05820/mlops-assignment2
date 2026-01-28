@@ -81,17 +81,88 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
-  # Job 3: Docker Build & Push to GitHub Container Registry
+  # Job 3: Train Model (Quick CI Training)
+  train-model:
+    name: Train Model
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create sample training data
+        run: |
+          python scripts/download_sample_data.py
+
+      - name: Train model (CI quick training)
+        run: |
+          python -m src.models.train \
+            --data-dir data/raw \
+            --epochs 2 \
+            --batch-size 32
+        env:
+          MLFLOW_TRACKING_URI: ./mlruns
+
+      - name: Validate trained model
+        run: |
+          python -c "
+          import torch
+          checkpoint = torch.load('models/best_model.pt', map_location='cpu')
+          accuracy = checkpoint.get('val_accuracy', 0)
+          print(f'✅ Model trained successfully')
+          print(f'   Val Accuracy: {accuracy:.4f}')
+          print(f'   Epoch: {checkpoint.get(\"epoch\", \"N/A\")}')
+          # For CI with synthetic data, we just check model was created
+          assert accuracy > 0, 'Model training failed'
+          "
+
+      - name: Upload trained model
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model
+          path: models/best_model.pt
+          retention-days: 5
+
+  # Job 4: Docker Build & Push to GitHub Container Registry
   docker-build-push:
     name: Docker Build & Push
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [lint, test, train-model]
     permissions:
       contents: read
       packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Download trained model
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model
+          path: models/
+
+      - name: Verify model downloaded
+        run: |
+          ls -la models/
+          echo "✅ Trained model ready for Docker build"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -123,7 +194,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Job 4: Model Validation
+  # Job 5: Model Validation (validates the committed model)
   model-validation:
     name: Model Validation
     runs-on: ubuntu-latest
