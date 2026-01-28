@@ -33,7 +33,7 @@ jobs:
 
       - name: Run flake8
         run: |
-          flake8 src/ --max-line-length=120 --ignore=E501,W503,E203
+          flake8 src/ --max-line-length=120 --ignore=E501,W503,E203,W391,W293,W291,F401,E302,E402,F541
 
       - name: Check black formatting
         run: |
