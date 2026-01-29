@@ -92,14 +92,8 @@ systemctl enable jenkins
 systemctl start jenkins
 print_status "Jenkins started"
 
-# Step 8: Install pip packages globally for jenkins user
-echo ""
-echo "Step 8: Installing Python packages..."
-pip3 install --upgrade pip
-pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-pip3 install mlflow fastapi uvicorn pillow numpy pandas scikit-learn pyyaml
-pip3 install pytest pytest-cov httpx flake8 black isort kaggle
-print_status "Python packages installed"
+# Note: Python packages are installed in a virtual environment by the Jenkins pipeline
+# This avoids conflicts with system packages (like requests installed via RPM)
 
 # Get initial password
 echo ""

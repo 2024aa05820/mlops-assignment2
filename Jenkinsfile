@@ -27,10 +27,16 @@ pipeline {
         stage('Setup Python Environment') {
             steps {
                 sh '''
-                    python3 --version
-                    pip3 install --upgrade pip
-                    pip3 install -r requirements.txt
-                    pip3 install pytest pytest-cov httpx flake8 black isort
+                    echo "Setting up Python virtual environment..."
+                    python3 -m venv venv
+                    source venv/bin/activate
+
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                    pip install pytest pytest-cov httpx flake8 black isort kaggle
+
+                    echo "Python environment ready!"
+                    python --version
                 '''
             }
         }
@@ -38,21 +44,23 @@ pipeline {
         stage('Lint & Code Quality') {
             steps {
                 sh '''
+                    source venv/bin/activate
                     echo "Running flake8..."
                     flake8 src/ --max-line-length=120 --ignore=E501,W503,E203,W391,W293,W291,F401,E302,E402,F541 || true
-                    
+
                     echo "Checking black formatting..."
                     black --check --line-length=120 src/ || true
-                    
+
                     echo "Checking import sorting..."
                     isort --check-only src/ || true
                 '''
             }
         }
-        
+
         stage('Unit Tests') {
             steps {
                 sh '''
+                    source venv/bin/activate
                     pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing || true
                 '''
             }
@@ -62,25 +70,26 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Download Data') {
             steps {
                 withCredentials([string(credentialsId: 'kaggle-api-token', variable: 'KAGGLE_API_TOKEN')]) {
                     sh '''
+                        source venv/bin/activate
                         echo "Downloading Kaggle dataset..."
                         export KAGGLE_USERNAME=$(echo $KAGGLE_API_TOKEN | cut -d: -f1)
                         export KAGGLE_KEY=$(echo $KAGGLE_API_TOKEN | cut -d: -f2)
-                        
+
                         # Download dataset if not exists
                         if [ ! -d "data/raw/train" ]; then
-                            python3 -c "
+                            python -c "
 from kaggle.api.kaggle_api_extended import KaggleApi
 api = KaggleApi()
 api.authenticate()
 api.dataset_download_files('bhavikjikadara/dog-and-cat-classification-dataset', path='data/', unzip=True)
 "
                             # Organize data
-                            python3 scripts/prepare_data.py || true
+                            python scripts/prepare_data.py || true
                         else
                             echo "Data already exists, skipping download"
                         fi
@@ -88,16 +97,17 @@ api.dataset_download_files('bhavikjikadara/dog-and-cat-classification-dataset', 
                 }
             }
         }
-        
+
         stage('Train Model') {
             steps {
                 sh '''
+                    source venv/bin/activate
                     echo "Training model with 2000 samples, 3 epochs..."
-                    python3 -m src.models.train \
+                    python -m src.models.train \
                         --data-dir data/raw \
                         --epochs 3 \
                         --batch-size 128
-                    
+
                     echo "Training complete!"
                     ls -la models/
                 '''
@@ -107,7 +117,8 @@ api.dataset_download_files('bhavikjikadara/dog-and-cat-classification-dataset', 
         stage('Model Validation') {
             steps {
                 sh '''
-                    python3 -c "
+                    source venv/bin/activate
+                    python -c "
 import torch
 import torch.nn.functional as F
 from PIL import Image
