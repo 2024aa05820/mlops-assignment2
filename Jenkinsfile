@@ -243,17 +243,9 @@ pipeline {
         }
         failure {
             echo '❌ Pipeline failed!'
-            sh '''
-                # Rollback: restart previous container if available
-                docker stop cats-dogs-api || true
-                docker rm cats-dogs-api || true
-            '''
         }
         always {
-            // Clean up old Docker images
-            sh '''
-                docker image prune -f || true
-            '''
+            echo 'Pipeline finished.'
         }
     }
 }
