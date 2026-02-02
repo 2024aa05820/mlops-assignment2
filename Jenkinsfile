@@ -96,9 +96,19 @@ pipeline {
                         # Create Kaggle config directory
                         mkdir -p ~/.kaggle
 
-                        # Create kaggle.json with the new token format
-                        # New KGAT_xxx tokens use "token" key instead of username/key
-                        echo "{\\"token\\":\\"$KAGGLE_TOKEN\\"}" > ~/.kaggle/kaggle.json
+                        # Parse the token - check if it's old format (username:key) or new format (KGAT_xxx)
+                        if echo "$KAGGLE_TOKEN" | grep -q ":"; then
+                            # Old format: username:key
+                            KAGGLE_USERNAME=$(echo "$KAGGLE_TOKEN" | cut -d: -f1)
+                            KAGGLE_KEY=$(echo "$KAGGLE_TOKEN" | cut -d: -f2)
+                            echo "{\\"username\\":\\"$KAGGLE_USERNAME\\",\\"key\\":\\"$KAGGLE_KEY\\"}" > ~/.kaggle/kaggle.json
+                            echo "Using old-format credentials (username:key)"
+                        else
+                            # New format: KGAT_xxx - set environment variable
+                            export KAGGLE_API_TOKEN=$KAGGLE_TOKEN
+                            echo "{\\"token\\":\\"$KAGGLE_TOKEN\\"}" > ~/.kaggle/kaggle.json
+                            echo "Using new-format token (KGAT_xxx)"
+                        fi
                         chmod 600 ~/.kaggle/kaggle.json
 
                         echo "Kaggle config created"
