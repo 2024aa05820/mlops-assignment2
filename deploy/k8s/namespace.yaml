@@ -1,0 +1,8 @@
+# Namespace for the MLOps application
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mlops
+  labels:
+    app: cats-dogs-classifier
+

@@ -4,24 +4,41 @@
 help:
 	@echo "Cats vs Dogs MLOps Project"
 	@echo ""
-	@echo "Available commands:"
-	@echo "  make init          - Create virtual environment and install dependencies"
-	@echo "  make install       - Install dependencies only"
+	@echo "=== Setup ==="
+	@echo "  make init            - Create virtual environment and install dependencies"
+	@echo "  make install         - Install dependencies only"
 	@echo "  make clean-reinstall - Remove venv and reinstall from scratch"
-	@echo "  make download      - Download dataset from Kaggle"
-	@echo "  make dvc-init      - Initialize DVC"
-	@echo "  make dvc-add       - Add data to DVC tracking"
-	@echo "  make data-setup    - Full data setup (download + DVC init + add)"
-	@echo "  make train         - Train the model"
-	@echo "  make serve         - Start the API server"
-	@echo "  make test          - Run tests"
-	@echo "  make lint          - Run linter"
-	@echo "  make format        - Format code"
-	@echo "  make docker-build  - Build Docker image"
-	@echo "  make docker-run    - Run Docker container"
-	@echo "  make deploy        - Deploy to Kubernetes"
-	@echo "  make mlflow-ui     - Start MLflow UI"
-	@echo "  make clean         - Clean up generated files"
+	@echo ""
+	@echo "=== Data ==="
+	@echo "  make download        - Download dataset from Kaggle"
+	@echo "  make dvc-init        - Initialize DVC"
+	@echo "  make data-setup      - Full data setup (download + DVC)"
+	@echo ""
+	@echo "=== Development ==="
+	@echo "  make train           - Train the model"
+	@echo "  make serve           - Start the API server locally"
+	@echo "  make test            - Run tests"
+	@echo "  make lint            - Run linter"
+	@echo "  make format          - Format code"
+	@echo ""
+	@echo "=== Docker ==="
+	@echo "  make docker-build    - Build Docker image"
+	@echo "  make docker-run      - Run Docker container"
+	@echo "  make docker-stop     - Stop Docker container"
+	@echo ""
+	@echo "=== Local Kubernetes (Kind) ==="
+	@echo "  make kind-install    - Install Kind and kubectl (brew)"
+	@echo "  make kind-up         - Create cluster and deploy (full setup)"
+	@echo "  make kind-down       - Delete the Kind cluster"
+	@echo "  make kind-status     - Show pods, services, deployments"
+	@echo "  make kind-logs       - View pod logs"
+	@echo "  make kind-test       - Test API endpoints"
+	@echo "  make kind-restart    - Restart deployment"
+	@echo "  make kind-shell      - Shell into a pod"
+	@echo ""
+	@echo "=== Other ==="
+	@echo "  make mlflow-ui       - Start MLflow UI"
+	@echo "  make clean           - Clean up generated files"
 
 # Environment setup
 init:
@@ -119,7 +136,135 @@ docker-run:
 docker-stop:
 	docker stop cats-dogs-api && docker rm cats-dogs-api
 
-# Kubernetes
+# ============================================
+# Local Kubernetes (Kind) - Mac Development
+# ============================================
+
+# Check if Kind is installed
+kind-check:
+	@which kind > /dev/null || (echo "❌ Kind not installed. Run: brew install kind" && exit 1)
+	@which kubectl > /dev/null || (echo "❌ kubectl not installed. Run: brew install kubectl" && exit 1)
+	@echo "✅ Kind and kubectl are installed"
+
+# Install Kind and kubectl (Mac)
+kind-install:
+	@echo "Installing Kind and kubectl..."
+	brew install kind kubectl
+	@echo "✅ Installation complete"
+
+# Create Kind cluster
+kind-create: kind-check
+	@echo "Creating Kind cluster..."
+	@if kind get clusters | grep -q mlops-cluster; then \
+		echo "Cluster already exists"; \
+	else \
+		kind create cluster --config deploy/k8s/kind-config.yaml; \
+	fi
+	@echo "✅ Kind cluster ready"
+	kubectl cluster-info --context kind-mlops-cluster
+
+# Delete Kind cluster
+kind-delete:
+	@echo "Deleting Kind cluster..."
+	kind delete cluster --name mlops-cluster
+	@echo "✅ Cluster deleted"
+
+# Build and load image to Kind
+kind-build: kind-check docker-build
+	@echo "Loading image to Kind cluster..."
+	kind load docker-image cats-dogs-api:latest --name mlops-cluster
+	@echo "✅ Image loaded to Kind"
+
+# Deploy to local Kind cluster
+kind-deploy: kind-build
+	@echo "Deploying to Kind cluster..."
+	kubectl apply -f deploy/k8s/namespace.yaml
+	kubectl apply -f deploy/k8s/configmap.yaml
+	kubectl apply -f deploy/k8s/deployment.yaml
+	kubectl apply -f deploy/k8s/service.yaml
+	@echo "Waiting for pods to be ready..."
+	kubectl wait --for=condition=ready pod -l app=cats-dogs-api -n mlops --timeout=120s || true
+	@echo ""
+	@echo "✅ Deployment complete!"
+	@echo "🌐 API available at: http://localhost:8000"
+	@echo ""
+	kubectl get pods,svc -n mlops
+
+# Full local K8s setup (create cluster + deploy)
+kind-up: kind-create kind-deploy
+	@echo ""
+	@echo "========================================="
+	@echo "✅ Local Kubernetes cluster is running!"
+	@echo "========================================="
+	@echo ""
+	@echo "API Endpoints:"
+	@echo "  Health:  http://localhost:8000/health"
+	@echo "  Ready:   http://localhost:8000/ready"
+	@echo "  Predict: http://localhost:8000/predict"
+	@echo "  Docs:    http://localhost:8000/docs"
+	@echo ""
+	@echo "Useful commands:"
+	@echo "  make kind-status  - Check pod status"
+	@echo "  make kind-logs    - View pod logs"
+	@echo "  make kind-shell   - Shell into pod"
+	@echo "  make kind-down    - Stop and delete cluster"
+
+# Stop local K8s (delete cluster)
+kind-down: kind-delete
+
+# Status of Kind deployment
+kind-status:
+	@echo "=== Cluster Info ==="
+	kubectl cluster-info --context kind-mlops-cluster 2>/dev/null || echo "Cluster not running"
+	@echo ""
+	@echo "=== Pods ==="
+	kubectl get pods -n mlops -o wide 2>/dev/null || echo "No pods found"
+	@echo ""
+	@echo "=== Services ==="
+	kubectl get svc -n mlops 2>/dev/null || echo "No services found"
+	@echo ""
+	@echo "=== Deployments ==="
+	kubectl get deployments -n mlops 2>/dev/null || echo "No deployments found"
+
+# View logs from Kind pods
+kind-logs:
+	kubectl logs -l app=cats-dogs-api -n mlops -f --tail=100
+
+# Shell into a pod
+kind-shell:
+	kubectl exec -it $$(kubectl get pods -n mlops -l app=cats-dogs-api -o jsonpath='{.items[0].metadata.name}') -n mlops -- /bin/bash
+
+# Restart deployment
+kind-restart:
+	kubectl rollout restart deployment/cats-dogs-api -n mlops
+	kubectl rollout status deployment/cats-dogs-api -n mlops
+
+# Scale deployment
+kind-scale:
+	@read -p "Enter number of replicas: " replicas; \
+	kubectl scale deployment/cats-dogs-api -n mlops --replicas=$$replicas
+	kubectl get pods -n mlops
+
+# Test the API
+kind-test:
+	@echo "Testing API endpoints..."
+	@echo ""
+	@echo "=== Health Check ==="
+	curl -s http://localhost:8000/health | python -m json.tool || echo "Failed"
+	@echo ""
+	@echo "=== Ready Check ==="
+	curl -s http://localhost:8000/ready | python -m json.tool || echo "Failed"
+	@echo ""
+	@echo "=== API Info ==="
+	curl -s http://localhost:8000/ | python -m json.tool || echo "Failed"
+	@echo ""
+	@echo "✅ API tests complete"
+
+# ============================================
+# Legacy Kubernetes commands
+# ============================================
+
+# Kubernetes (generic - works with any cluster)
 deploy:
 	kubectl apply -f deploy/k8s/
 

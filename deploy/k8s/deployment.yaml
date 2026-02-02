@@ -1,0 +1,54 @@
+# Deployment for Cats vs Dogs API
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cats-dogs-api
+  namespace: mlops
+  labels:
+    app: cats-dogs-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cats-dogs-api
+  template:
+    metadata:
+      labels:
+        app: cats-dogs-api
+    spec:
+      containers:
+        - name: cats-dogs-api
+          image: cats-dogs-api:latest
+          imagePullPolicy: Never  # Use local image (important for Kind)
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          env:
+            - name: ENVIRONMENT
+              value: "kubernetes"
+            - name: LOG_LEVEL
+              value: "INFO"
+
