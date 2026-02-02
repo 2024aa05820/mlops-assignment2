@@ -73,23 +73,24 @@ pipeline {
 
         stage('Download Data') {
             steps {
-                withCredentials([string(credentialsId: 'kaggle-api-token', variable: 'KAGGLE_API_TOKEN')]) {
+                withCredentials([string(credentialsId: 'kaggle-api-token', variable: 'KAGGLE_TOKEN')]) {
                     sh '''
                         source venv/bin/activate
                         echo "Downloading Kaggle dataset..."
-                        export KAGGLE_USERNAME=$(echo $KAGGLE_API_TOKEN | cut -d: -f1)
-                        export KAGGLE_KEY=$(echo $KAGGLE_API_TOKEN | cut -d: -f2)
+
+                        # New Kaggle API token format (KGAT_xxx)
+                        export KAGGLE_API_TOKEN=$KAGGLE_TOKEN
 
                         # Download dataset if not exists
                         if [ ! -d "data/raw/train" ]; then
-                            python -c "
-from kaggle.api.kaggle_api_extended import KaggleApi
-api = KaggleApi()
-api.authenticate()
-api.dataset_download_files('bhavikjikadara/dog-and-cat-classification-dataset', path='data/', unzip=True)
-"
+                            echo "Downloading from Kaggle..."
+                            kaggle datasets download -d bhavikjikadara/dog-and-cat-classification-dataset -p data/ --unzip
+
                             # Organize data
-                            python scripts/prepare_data.py || true
+                            python scripts/prepare_data.py --data-dir data || true
+
+                            echo "Dataset downloaded and organized!"
+                            ls -la data/
                         else
                             echo "Data already exists, skipping download"
                         fi
