@@ -93,8 +93,15 @@ pipeline {
                         source venv/bin/activate
                         echo "Downloading Kaggle dataset..."
 
-                        # New Kaggle API token format (KGAT_xxx)
-                        export KAGGLE_API_TOKEN=$KAGGLE_TOKEN
+                        # Create Kaggle config directory
+                        mkdir -p ~/.kaggle
+
+                        # Create kaggle.json with the new token format
+                        # New KGAT_xxx tokens use "token" key instead of username/key
+                        echo "{\\"token\\":\\"$KAGGLE_TOKEN\\"}" > ~/.kaggle/kaggle.json
+                        chmod 600 ~/.kaggle/kaggle.json
+
+                        echo "Kaggle config created"
 
                         # Download dataset if not exists
                         if [ ! -d "data/raw/train" ]; then
