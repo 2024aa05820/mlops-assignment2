@@ -93,30 +93,30 @@ pipeline {
                         source venv/bin/activate
                         echo "Downloading Kaggle dataset..."
 
-                        # Create Kaggle config directory
-                        mkdir -p ~/.kaggle
-
-                        # Parse the token - check if it's old format (username:key) or new format (KGAT_xxx)
-                        if echo "$KAGGLE_TOKEN" | grep -q ":"; then
-                            # Old format: username:key
-                            KAGGLE_USERNAME=$(echo "$KAGGLE_TOKEN" | cut -d: -f1)
-                            KAGGLE_KEY=$(echo "$KAGGLE_TOKEN" | cut -d: -f2)
-                            echo "{\\"username\\":\\"$KAGGLE_USERNAME\\",\\"key\\":\\"$KAGGLE_KEY\\"}" > ~/.kaggle/kaggle.json
-                            echo "Using old-format credentials (username:key)"
-                        else
-                            # New format: KGAT_xxx - set environment variable
-                            export KAGGLE_API_TOKEN=$KAGGLE_TOKEN
-                            echo "{\\"token\\":\\"$KAGGLE_TOKEN\\"}" > ~/.kaggle/kaggle.json
-                            echo "Using new-format token (KGAT_xxx)"
-                        fi
-                        chmod 600 ~/.kaggle/kaggle.json
-
-                        echo "Kaggle config created"
-
                         # Download dataset if not exists
                         if [ ! -d "data/raw/train" ]; then
-                            echo "Downloading from Kaggle..."
-                            kaggle datasets download -d bhavikjikadara/dog-and-cat-classification-dataset -p data/ --unzip
+                            # Create Kaggle config directory
+                            mkdir -p ~/.kaggle
+
+                            # Kaggle CLI requires old format: username:key
+                            # Get this from: https://www.kaggle.com/settings -> API -> Create New Token
+                            if echo "$KAGGLE_TOKEN" | grep -q ":"; then
+                                # Format: username:key
+                                KAGGLE_USERNAME=$(echo "$KAGGLE_TOKEN" | cut -d: -f1)
+                                KAGGLE_KEY=$(echo "$KAGGLE_TOKEN" | cut -d: -f2)
+                                echo "{\\"username\\":\\"$KAGGLE_USERNAME\\",\\"key\\":\\"$KAGGLE_KEY\\"}" > ~/.kaggle/kaggle.json
+                                chmod 600 ~/.kaggle/kaggle.json
+                                echo "Kaggle credentials configured"
+
+                                echo "Downloading from Kaggle..."
+                                kaggle datasets download -d bhavikjikadara/dog-and-cat-classification-dataset -p data/ --unzip
+                            else
+                                echo "ERROR: Kaggle token must be in format: username:key"
+                                echo "Get your credentials from: https://www.kaggle.com/settings"
+                                echo "Click 'Create New Token' to download kaggle.json"
+                                echo "Then set Jenkins credential as: your_username:your_api_key"
+                                exit 1
+                            fi
 
                             # Organize data
                             python scripts/prepare_data.py --data-dir data || true
