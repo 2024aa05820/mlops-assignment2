@@ -119,45 +119,7 @@ pipeline {
             steps {
                 sh '''
                     source venv/bin/activate
-                    python -c "
-import torch
-import torch.nn.functional as F
-from PIL import Image
-
-# Load and validate model
-checkpoint = torch.load('models/best_model.pt', map_location='cpu')
-print('✅ Model loaded successfully')
-print(f'   Epoch: {checkpoint.get(\"epoch\", \"N/A\")}')
-val_acc = checkpoint.get('val_accuracy', 0)
-print(f'   Val Accuracy: {val_acc:.4f}')
-
-# Quality gate: accuracy must be > 50% (better than random)
-assert val_acc > 0.50, f'Model accuracy {val_acc} below threshold 0.50'
-print('✅ Accuracy threshold passed')
-
-# Test inference
-from src.models.cnn import SimpleCNN
-from src.data.preprocessing import get_val_transforms
-
-model = SimpleCNN()
-model.load_state_dict(checkpoint['model_state_dict'])
-model.eval()
-
-transform = get_val_transforms(224)
-dummy_image = Image.new('RGB', (224, 224), color='red')
-input_tensor = transform(dummy_image).unsqueeze(0)
-
-with torch.no_grad():
-    output = model(input_tensor)
-    # Model outputs 2 classes: [cat_prob, dog_prob]
-    probs = F.softmax(output, dim=1)
-    predicted_class = torch.argmax(probs, dim=1).item()
-    confidence = probs[0][predicted_class].item()
-
-class_names = ['cat', 'dog']
-print(f'✅ Inference test passed')
-print(f'   Predicted: {class_names[predicted_class]} (confidence: {confidence:.4f})')
-"
+                    python scripts/validate_model.py --model-path models/best_model.pt
                 '''
             }
         }
