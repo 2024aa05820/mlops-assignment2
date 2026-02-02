@@ -3,14 +3,20 @@
 
 pipeline {
     agent any
-    
+
+    parameters {
+        booleanParam(name: 'SKIP_TRAINING', defaultValue: false, description: 'Skip model training (use existing model)')
+        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip lint and unit tests')
+        booleanParam(name: 'SKIP_DOCKER', defaultValue: false, description: 'Skip Docker build and push')
+    }
+
     environment {
         PYTHON_VERSION = '3.11'
         REGISTRY = 'ghcr.io'
         IMAGE_NAME = '2024aa05820/mlops-assignment2'
         KAGGLE_CONFIG_DIR = "${WORKSPACE}"
     }
-    
+
     triggers {
         // Poll GitHub every 5 minutes for changes
         pollSCM('H/5 * * * *')
@@ -42,6 +48,9 @@ pipeline {
         }
         
         stage('Lint & Code Quality') {
+            when {
+                expression { return !params.SKIP_TESTS }
+            }
             steps {
                 sh '''
                     source venv/bin/activate
@@ -58,6 +67,9 @@ pipeline {
         }
 
         stage('Unit Tests') {
+            when {
+                expression { return !params.SKIP_TESTS }
+            }
             steps {
                 sh '''
                     source venv/bin/activate
@@ -72,6 +84,9 @@ pipeline {
         }
 
         stage('Download Data') {
+            when {
+                expression { return !params.SKIP_TRAINING }
+            }
             steps {
                 withCredentials([string(credentialsId: 'kaggle-api-token', variable: 'KAGGLE_TOKEN')]) {
                     sh '''
@@ -100,6 +115,9 @@ pipeline {
         }
 
         stage('Train Model') {
+            when {
+                expression { return !params.SKIP_TRAINING }
+            }
             steps {
                 sh '''
                     source venv/bin/activate
@@ -125,6 +143,9 @@ pipeline {
         }
         
         stage('Docker Build') {
+            when {
+                expression { return !params.SKIP_DOCKER }
+            }
             steps {
                 sh '''
                     echo "Building Docker image..."
@@ -138,6 +159,9 @@ pipeline {
         }
 
         stage('Docker Push') {
+            when {
+                expression { return !params.SKIP_DOCKER }
+            }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'ghcr-credentials', usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')]) {
                     sh '''
@@ -155,6 +179,9 @@ pipeline {
         }
 
         stage('Deploy') {
+            when {
+                expression { return !params.SKIP_DOCKER }
+            }
             steps {
                 sh '''
                     echo "Deploying new container..."
