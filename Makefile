@@ -264,19 +264,29 @@ kind-test:
 # Monitoring (Prometheus + Grafana) - M5
 # ============================================
 
-# Deploy Prometheus and Grafana
+# Deploy Prometheus, Node Exporter, and Grafana
 monitoring-deploy:
-	@echo "Deploying Prometheus and Grafana..."
+	@echo "Deploying monitoring stack..."
+	@echo "1. Deploying Prometheus..."
 	kubectl apply -f deploy/k8s/prometheus.yaml
+	@echo "2. Deploying Node Exporter (OS metrics)..."
+	kubectl apply -f deploy/k8s/node-exporter.yaml
+	@echo "3. Deploying Grafana dashboards..."
 	kubectl apply -f deploy/k8s/grafana-dashboard.yaml
+	@echo "4. Deploying Grafana..."
 	kubectl apply -f deploy/k8s/grafana.yaml
+	@echo ""
 	@echo "Waiting for monitoring pods..."
 	kubectl wait --for=condition=ready pod -l app=prometheus -n mlops --timeout=120s || true
+	kubectl wait --for=condition=ready pod -l app=node-exporter -n mlops --timeout=120s || true
 	kubectl wait --for=condition=ready pod -l app=grafana -n mlops --timeout=120s || true
 	@echo ""
-	@echo "✅ Monitoring deployed!"
+	@echo "✅ Monitoring stack deployed!"
+	@echo ""
 	@echo "📊 Prometheus: http://localhost:9090"
-	@echo "📈 Grafana:    http://localhost:3000 (admin/admin123)"
+	@echo "📈 Grafana:    http://localhost:3000"
+	@echo ""
+	@echo "Grafana Login: admin / admin123"
 	@echo ""
 	kubectl get pods -n mlops
 
@@ -300,8 +310,13 @@ grafana-logs:
 monitoring-delete:
 	kubectl delete -f deploy/k8s/grafana.yaml --ignore-not-found
 	kubectl delete -f deploy/k8s/grafana-dashboard.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/node-exporter.yaml --ignore-not-found
 	kubectl delete -f deploy/k8s/prometheus.yaml --ignore-not-found
 	@echo "✅ Monitoring deleted"
+
+# View Node Exporter logs
+node-exporter-logs:
+	kubectl logs -l app=node-exporter -n mlops -f --tail=50
 
 # Full stack: API + Monitoring
 kind-full: kind-up monitoring-deploy
