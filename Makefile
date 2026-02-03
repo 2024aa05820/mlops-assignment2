@@ -346,6 +346,39 @@ alerts-status:
 	@echo "=== 🚨 Firing Alerts ==="
 	curl -s http://localhost:9093/api/v2/alerts 2>/dev/null | python3 -c "import sys,json; alerts=json.load(sys.stdin); [print(f'  🔴 {a[\"labels\"][\"alertname\"]} ({a[\"labels\"].get(\"severity\",\"unknown\")})') for a in alerts] if alerts else print('  ✅ No alerts firing')" || echo "Cannot connect to AlertManager"
 
+# Test alerts - reload rules and check if TestAlert fires
+alerts-test:
+	@echo "========================================="
+	@echo "🧪 Testing Alert Pipeline"
+	@echo "========================================="
+	@echo ""
+	@echo "1️⃣  Reloading Prometheus alert rules..."
+	kubectl delete configmap prometheus-alerts -n mlops --ignore-not-found
+	kubectl apply -f deploy/k8s/prometheus-alerts.yaml
+	@echo ""
+	@echo "2️⃣  Restarting Prometheus..."
+	kubectl rollout restart deployment prometheus -n mlops
+	@echo ""
+	@echo "3️⃣  Waiting for Prometheus to be ready..."
+	kubectl wait --for=condition=ready pod -l app=prometheus -n mlops --timeout=120s
+	@echo ""
+	@echo "4️⃣  Waiting 30 seconds for TestAlert to fire..."
+	sleep 30
+	@echo ""
+	@echo "5️⃣  Checking Prometheus alerts..."
+	@curl -s http://localhost:9090/api/v1/alerts 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); alerts=d.get('data',{}).get('alerts',[]); [print(f'  {a[\"state\"].upper()}: {a[\"labels\"][\"alertname\"]} ({a[\"labels\"].get(\"severity\",\"unknown\")})') for a in alerts] if alerts else print('  No alerts found')" || echo "  Cannot connect to Prometheus"
+	@echo ""
+	@echo "6️⃣  Checking AlertManager..."
+	@curl -s http://localhost:9093/api/v2/alerts 2>/dev/null | python3 -c "import sys,json; alerts=json.load(sys.stdin); [print(f'  🔔 {a[\"labels\"][\"alertname\"]}: {a[\"status\"][\"state\"]}') for a in alerts] if alerts else print('  ✅ No alerts in AlertManager')" || echo "  Cannot connect to AlertManager (port 9093 may not be mapped)"
+	@echo ""
+	@echo "========================================="
+	@echo "✅ Alert test complete!"
+	@echo "========================================="
+	@echo ""
+	@echo "📊 View in Prometheus: http://localhost:9090/alerts"
+	@echo "🔔 View in AlertManager: http://localhost:9093"
+	@echo ""
+
 # Delete monitoring stack
 monitoring-delete:
 	kubectl delete -f deploy/k8s/grafana.yaml --ignore-not-found
