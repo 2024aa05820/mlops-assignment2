@@ -16,6 +16,8 @@ pipeline {
         REGISTRY = 'ghcr.io'
         IMAGE_NAME = '2024aa05820/mlops-assignment2'
         KAGGLE_CONFIG_DIR = "${WORKSPACE}"
+        // Add common paths for Mac (Docker, Kind, kubectl)
+        PATH = "/usr/local/bin:/opt/homebrew/bin:${env.PATH}"
     }
 
     triggers {
