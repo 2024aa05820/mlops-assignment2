@@ -8,30 +8,25 @@ data:
   alert-rules.yml: |
     groups:
       # ============================================
-      # Test Alert - Always Fires (for testing)
-      # ============================================
-      - name: test-alerts
-        rules:
-          # Test Alert - Always fires immediately
-          - alert: TestAlert
-            expr: vector(1)
-            for: 10s
-            labels:
-              severity: warning
-              service: test
-            annotations:
-              summary: "🧪 Test Alert - System Working!"
-              description: "This is a test alert to verify the alerting pipeline is working correctly."
-
-      # ============================================
       # Application Alerts - Cats vs Dogs API
       # ============================================
       - name: application-alerts
         rules:
+          # High Prediction Rate Alert (easy to simulate)
+          - alert: HighPredictionRate
+            expr: rate(predictions_total[1m]) > 0.5
+            for: 30s
+            labels:
+              severity: warning
+              service: cats-dogs-api
+            annotations:
+              summary: "High prediction rate detected"
+              description: "Prediction rate is {{ $value | printf \"%.2f\" }} req/sec (threshold: 0.5/sec)"
+
           # High Error Rate Alert
           - alert: HighPredictionErrorRate
-            expr: rate(prediction_errors_total[5m]) > 0.1
-            for: 2m
+            expr: rate(prediction_errors_total[1m]) > 0.1
+            for: 30s
             labels:
               severity: critical
               service: cats-dogs-api
@@ -39,37 +34,37 @@ data:
               summary: "High prediction error rate detected"
               description: "Error rate is {{ $value | printf \"%.2f\" }} errors/sec (threshold: 0.1)"
 
-          # High Latency Alert
+          # High Latency Alert (easy to simulate - threshold 0.5s)
           - alert: HighPredictionLatency
-            expr: histogram_quantile(0.95, rate(prediction_latency_seconds_bucket[5m])) > 2
-            for: 5m
+            expr: histogram_quantile(0.95, rate(prediction_latency_seconds_bucket[1m])) > 0.5
+            for: 30s
             labels:
               severity: warning
               service: cats-dogs-api
             annotations:
               summary: "High prediction latency detected"
-              description: "95th percentile latency is {{ $value | printf \"%.2f\" }}s (threshold: 2s)"
+              description: "95th percentile latency is {{ $value | printf \"%.2f\" }}s (threshold: 0.5s)"
 
-          # Very High Latency (Critical)
+          # Very High Latency (Critical) - threshold 1s
           - alert: CriticalPredictionLatency
-            expr: histogram_quantile(0.99, rate(prediction_latency_seconds_bucket[5m])) > 5
-            for: 2m
+            expr: histogram_quantile(0.99, rate(prediction_latency_seconds_bucket[1m])) > 1
+            for: 30s
             labels:
               severity: critical
               service: cats-dogs-api
             annotations:
               summary: "Critical prediction latency!"
-              description: "99th percentile latency is {{ $value | printf \"%.2f\" }}s (threshold: 5s)"
+              description: "99th percentile latency is {{ $value | printf \"%.2f\" }}s (threshold: 1s)"
 
-          # No Predictions (API might be down)
+          # No Predictions (API might be down) - 2 minutes for easy testing
           - alert: NoPredictions
-            expr: sum(rate(predictions_total[10m])) == 0
-            for: 15m
+            expr: sum(rate(predictions_total[2m])) == 0
+            for: 2m
             labels:
               severity: warning
               service: cats-dogs-api
             annotations:
-              summary: "No predictions in the last 15 minutes"
+              summary: "No predictions in the last 2 minutes"
               description: "The API has not processed any predictions. Check if the service is running."
 
       # ============================================
@@ -77,21 +72,21 @@ data:
       # ============================================
       - name: kubernetes-alerts
         rules:
-          # Pod Not Ready
+          # Pod Not Ready (1 minute for easy testing)
           - alert: PodNotReady
             expr: kube_pod_status_ready{condition="true",namespace="mlops"} == 0
-            for: 5m
+            for: 1m
             labels:
               severity: warning
               service: kubernetes
             annotations:
               summary: "Pod {{ $labels.pod }} is not ready"
-              description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been not ready for 5 minutes."
+              description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been not ready for 1 minute."
 
           # Pod CrashLooping
           - alert: PodCrashLooping
-            expr: rate(kube_pod_container_status_restarts_total{namespace="mlops"}[15m]) > 0
-            for: 5m
+            expr: rate(kube_pod_container_status_restarts_total{namespace="mlops"}[5m]) > 0
+            for: 1m
             labels:
               severity: critical
               service: kubernetes
@@ -99,10 +94,10 @@ data:
               summary: "Pod {{ $labels.pod }} is crash looping"
               description: "Pod {{ $labels.pod }} is restarting frequently. Check logs for errors."
 
-          # Deployment Replicas Mismatch
+          # Deployment Replicas Mismatch (1 minute for easy testing)
           - alert: DeploymentReplicasMismatch
             expr: kube_deployment_spec_replicas{namespace="mlops"} != kube_deployment_status_replicas_available{namespace="mlops"}
-            for: 10m
+            for: 1m
             labels:
               severity: warning
               service: kubernetes
@@ -113,7 +108,7 @@ data:
           # HPA at Max Capacity
           - alert: HPAAtMaxCapacity
             expr: kube_horizontalpodautoscaler_status_current_replicas{namespace="mlops"} == kube_horizontalpodautoscaler_spec_max_replicas{namespace="mlops"}
-            for: 15m
+            for: 2m
             labels:
               severity: warning
               service: kubernetes
@@ -126,10 +121,10 @@ data:
       # ============================================
       - name: system-alerts
         rules:
-          # High CPU Usage
+          # High CPU Usage (1 minute for testing)
           - alert: HighCPUUsage
-            expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
-            for: 10m
+            expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 80
+            for: 1m
             labels:
               severity: warning
               service: node
@@ -139,8 +134,8 @@ data:
 
           # Critical CPU Usage
           - alert: CriticalCPUUsage
-            expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
-            for: 5m
+            expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 95
+            for: 30s
             labels:
               severity: critical
               service: node
@@ -148,10 +143,10 @@ data:
               summary: "Critical CPU usage!"
               description: "CPU usage is {{ $value | printf \"%.1f\" }}% (threshold: 95%)"
 
-          # High Memory Usage
+          # High Memory Usage (1 minute for testing)
           - alert: HighMemoryUsage
             expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
-            for: 10m
+            for: 1m
             labels:
               severity: warning
               service: node
@@ -162,7 +157,7 @@ data:
           # Critical Memory Usage
           - alert: CriticalMemoryUsage
             expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
-            for: 5m
+            for: 30s
             labels:
               severity: critical
               service: node
@@ -170,10 +165,10 @@ data:
               summary: "Critical memory usage!"
               description: "Memory usage is {{ $value | printf \"%.1f\" }}% (threshold: 95%)"
 
-          # High Disk Usage
+          # High Disk Usage (1 minute for testing)
           - alert: HighDiskUsage
             expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 80
-            for: 10m
+            for: 1m
             labels:
               severity: warning
               service: node
