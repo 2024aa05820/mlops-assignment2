@@ -101,7 +101,7 @@ pipeline {
 
                             # KAGGLE_TOKEN should be JSON format: {"username":"xxx","key":"xxx"}
                             # Use Python to properly format and write the JSON (handles spaces/escaping)
-                            python3 -c "
+                            python3 << 'PYTHON_SCRIPT'
 import json
 import os
 
@@ -114,12 +114,12 @@ try:
         json.dump(data, f)
     os.chmod(kaggle_path, 0o600)
     print('Kaggle credentials configured')
-    print(f'Username: {data.get(\"username\", \"N/A\")}')
+    print('Username: ' + data.get('username', 'N/A'))
 except Exception as e:
-    print(f'ERROR: Failed to parse Kaggle token: {e}')
-    print('Expected format: {\"username\":\"xxx\",\"key\":\"xxx\"}')
+    print('ERROR: Failed to parse Kaggle token: ' + str(e))
+    print('Expected format: {"username":"xxx","key":"xxx"}')
     exit(1)
-"
+PYTHON_SCRIPT
 
                             echo "Downloading from Kaggle..."
                             kaggle datasets download -d bhavikjikadara/dog-and-cat-classification-dataset -p data/ --unzip
