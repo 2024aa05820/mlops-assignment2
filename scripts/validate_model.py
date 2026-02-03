@@ -5,6 +5,11 @@ Validates trained model meets quality gates before deployment.
 """
 
 import sys
+import os
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import torch
 import torch.nn.functional as F
 from PIL import Image
