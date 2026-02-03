@@ -99,25 +99,13 @@ pipeline {
                             # Create Kaggle config directory
                             mkdir -p ~/.kaggle
 
-                            # Kaggle CLI requires old format: username:key
-                            # Get this from: https://www.kaggle.com/settings -> API -> Create New Token
-                            if echo "$KAGGLE_TOKEN" | grep -q ":"; then
-                                # Format: username:key
-                                KAGGLE_USERNAME=$(echo "$KAGGLE_TOKEN" | cut -d: -f1)
-                                KAGGLE_KEY=$(echo "$KAGGLE_TOKEN" | cut -d: -f2)
-                                echo "{\\"username\\":\\"$KAGGLE_USERNAME\\",\\"key\\":\\"$KAGGLE_KEY\\"}" > ~/.kaggle/kaggle.json
-                                chmod 600 ~/.kaggle/kaggle.json
-                                echo "Kaggle credentials configured"
+                            # KAGGLE_TOKEN should be JSON format: {"username":"xxx","key":"xxx"}
+                            echo "$KAGGLE_TOKEN" > ~/.kaggle/kaggle.json
+                            chmod 600 ~/.kaggle/kaggle.json
+                            echo "Kaggle credentials configured"
 
-                                echo "Downloading from Kaggle..."
-                                kaggle datasets download -d bhavikjikadara/dog-and-cat-classification-dataset -p data/ --unzip
-                            else
-                                echo "ERROR: Kaggle token must be in format: username:key"
-                                echo "Get your credentials from: https://www.kaggle.com/settings"
-                                echo "Click 'Create New Token' to download kaggle.json"
-                                echo "Then set Jenkins credential as: your_username:your_api_key"
-                                exit 1
-                            fi
+                            echo "Downloading from Kaggle..."
+                            kaggle datasets download -d bhavikjikadara/dog-and-cat-classification-dataset -p data/ --unzip
 
                             # Organize data
                             python scripts/prepare_data.py --data-dir data || true
