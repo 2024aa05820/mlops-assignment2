@@ -1,5 +1,6 @@
 // Jenkinsfile for MLOps Assignment 2 - CI/CD Pipeline
-// Runs on Rocky Linux VM server with full training (2000 samples)
+// M3: CI Pipeline + M4: CD Pipeline with Local Kubernetes (Kind)
+// Supports both local Mac development and remote server deployment
 
 pipeline {
     agent any
@@ -195,30 +196,42 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy to Kubernetes') {
             when {
                 expression { return !params.SKIP_DOCKER }
             }
             steps {
                 sh '''
-                    echo "Deploying new container..."
+                    echo "Deploying to local Kubernetes (Kind)..."
 
-                    # Stop existing container if running
-                    docker stop cats-dogs-api || true
-                    docker rm cats-dogs-api || true
+                    # Check if Kind cluster exists
+                    if ! kind get clusters 2>/dev/null | grep -q mlops-cluster; then
+                        echo "Creating Kind cluster..."
+                        kind create cluster --config deploy/k8s/kind-config.yaml
+                    fi
 
-                    # Run new container
-                    docker run -d \
-                        --name cats-dogs-api \
-                        -p 8000:8000 \
-                        --restart always \
-                        ${REGISTRY}/${IMAGE_NAME}:latest
+                    # Tag image for Kind
+                    docker tag ${REGISTRY}/${IMAGE_NAME}:latest cats-dogs-api:latest
 
-                    echo "Waiting for container to start..."
-                    sleep 10
+                    # Load image into Kind cluster
+                    echo "Loading image to Kind cluster..."
+                    kind load docker-image cats-dogs-api:latest --name mlops-cluster
 
-                    echo "Container status:"
-                    docker ps | grep cats-dogs-api
+                    # Deploy to Kubernetes
+                    echo "Applying Kubernetes manifests..."
+                    kubectl apply -f deploy/k8s/namespace.yaml
+                    kubectl apply -f deploy/k8s/configmap.yaml
+                    kubectl apply -f deploy/k8s/deployment.yaml
+                    kubectl apply -f deploy/k8s/service.yaml
+
+                    # Wait for pods to be ready
+                    echo "Waiting for pods to be ready..."
+                    kubectl wait --for=condition=ready pod -l app=cats-dogs-api -n mlops --timeout=120s
+
+                    # Show deployment status
+                    echo ""
+                    echo "=== Deployment Status ==="
+                    kubectl get pods,svc -n mlops
                 '''
             }
         }
@@ -256,13 +269,18 @@ pipeline {
         success {
             echo '✅ Pipeline completed successfully!'
             echo "Docker image: ${REGISTRY}/${IMAGE_NAME}:${BUILD_NUMBER}"
-            echo "API running at: http://localhost:8000"
+            echo "API running at: http://localhost:8000 (Kind cluster)"
+            echo "Check status: kubectl get pods -n mlops"
         }
         failure {
             echo '❌ Pipeline failed!'
         }
         always {
             echo 'Pipeline finished.'
+            echo 'Useful commands:'
+            echo '  kubectl get pods -n mlops'
+            echo '  kubectl logs -l app=cats-dogs-api -n mlops'
+            echo '  curl http://localhost:8000/health'
         }
     }
 }
