@@ -89,37 +89,18 @@ pipeline {
                 expression { return !params.SKIP_TRAINING }
             }
             steps {
-                withCredentials([string(credentialsId: 'kaggle-api-token', variable: 'KAGGLE_TOKEN')]) {
+                withCredentials([
+                    string(credentialsId: 'kaggle-username', variable: 'KAGGLE_USERNAME'),
+                    string(credentialsId: 'kaggle-key', variable: 'KAGGLE_KEY')
+                ]) {
                     sh '''
                         source venv/bin/activate
                         echo "Downloading Kaggle dataset..."
 
                         # Download dataset if not exists
                         if [ ! -d "data/raw/train" ]; then
-                            # Create Kaggle config directory
-                            mkdir -p ~/.kaggle
-
-                            # KAGGLE_TOKEN should be JSON format: {"username":"xxx","key":"xxx"}
-                            # Use Python to properly format and write the JSON (handles spaces/escaping)
-                            python3 << 'PYTHON_SCRIPT'
-import json
-import os
-
-token = os.environ.get('KAGGLE_TOKEN', '')
-try:
-    # Parse and re-write as compact JSON
-    data = json.loads(token)
-    kaggle_path = os.path.expanduser('~/.kaggle/kaggle.json')
-    with open(kaggle_path, 'w') as f:
-        json.dump(data, f)
-    os.chmod(kaggle_path, 0o600)
-    print('Kaggle credentials configured')
-    print('Username: ' + data.get('username', 'N/A'))
-except Exception as e:
-    print('ERROR: Failed to parse Kaggle token: ' + str(e))
-    print('Expected format: {"username":"xxx","key":"xxx"}')
-    exit(1)
-PYTHON_SCRIPT
+                            echo "Kaggle credentials configured from Jenkins"
+                            echo "Username: $KAGGLE_USERNAME"
 
                             echo "Downloading from Kaggle..."
                             kaggle datasets download -d bhavikjikadara/dog-and-cat-classification-dataset -p data/ --unzip
