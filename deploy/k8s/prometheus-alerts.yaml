@@ -1,0 +1,167 @@
+# Prometheus Alert Rules
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  namespace: mlops
+data:
+  alert-rules.yml: |
+    groups:
+      # ============================================
+      # Application Alerts - Cats vs Dogs API
+      # ============================================
+      - name: application-alerts
+        rules:
+          # High Error Rate Alert
+          - alert: HighPredictionErrorRate
+            expr: rate(prediction_errors_total[5m]) > 0.1
+            for: 2m
+            labels:
+              severity: critical
+              service: cats-dogs-api
+            annotations:
+              summary: "High prediction error rate detected"
+              description: "Error rate is {{ $value | printf \"%.2f\" }} errors/sec (threshold: 0.1)"
+
+          # High Latency Alert
+          - alert: HighPredictionLatency
+            expr: histogram_quantile(0.95, rate(prediction_latency_seconds_bucket[5m])) > 2
+            for: 5m
+            labels:
+              severity: warning
+              service: cats-dogs-api
+            annotations:
+              summary: "High prediction latency detected"
+              description: "95th percentile latency is {{ $value | printf \"%.2f\" }}s (threshold: 2s)"
+
+          # Very High Latency (Critical)
+          - alert: CriticalPredictionLatency
+            expr: histogram_quantile(0.99, rate(prediction_latency_seconds_bucket[5m])) > 5
+            for: 2m
+            labels:
+              severity: critical
+              service: cats-dogs-api
+            annotations:
+              summary: "Critical prediction latency!"
+              description: "99th percentile latency is {{ $value | printf \"%.2f\" }}s (threshold: 5s)"
+
+          # No Predictions (API might be down)
+          - alert: NoPredictions
+            expr: sum(rate(predictions_total[10m])) == 0
+            for: 15m
+            labels:
+              severity: warning
+              service: cats-dogs-api
+            annotations:
+              summary: "No predictions in the last 15 minutes"
+              description: "The API has not processed any predictions. Check if the service is running."
+
+      # ============================================
+      # Kubernetes Cluster Alerts
+      # ============================================
+      - name: kubernetes-alerts
+        rules:
+          # Pod Not Ready
+          - alert: PodNotReady
+            expr: kube_pod_status_ready{condition="true",namespace="mlops"} == 0
+            for: 5m
+            labels:
+              severity: warning
+              service: kubernetes
+            annotations:
+              summary: "Pod {{ $labels.pod }} is not ready"
+              description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been not ready for 5 minutes."
+
+          # Pod CrashLooping
+          - alert: PodCrashLooping
+            expr: rate(kube_pod_container_status_restarts_total{namespace="mlops"}[15m]) > 0
+            for: 5m
+            labels:
+              severity: critical
+              service: kubernetes
+            annotations:
+              summary: "Pod {{ $labels.pod }} is crash looping"
+              description: "Pod {{ $labels.pod }} is restarting frequently. Check logs for errors."
+
+          # Deployment Replicas Mismatch
+          - alert: DeploymentReplicasMismatch
+            expr: kube_deployment_spec_replicas{namespace="mlops"} != kube_deployment_status_replicas_available{namespace="mlops"}
+            for: 10m
+            labels:
+              severity: warning
+              service: kubernetes
+            annotations:
+              summary: "Deployment {{ $labels.deployment }} has replica mismatch"
+              description: "Deployment {{ $labels.deployment }} has {{ $value }} available replicas, expected {{ $labels.spec_replicas }}."
+
+          # HPA at Max Capacity
+          - alert: HPAAtMaxCapacity
+            expr: kube_horizontalpodautoscaler_status_current_replicas{namespace="mlops"} == kube_horizontalpodautoscaler_spec_max_replicas{namespace="mlops"}
+            for: 15m
+            labels:
+              severity: warning
+              service: kubernetes
+            annotations:
+              summary: "HPA {{ $labels.horizontalpodautoscaler }} at maximum capacity"
+              description: "HPA is running at max replicas. Consider increasing max replicas."
+
+      # ============================================
+      # System Resource Alerts (Node Exporter)
+      # ============================================
+      - name: system-alerts
+        rules:
+          # High CPU Usage
+          - alert: HighCPUUsage
+            expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+            for: 10m
+            labels:
+              severity: warning
+              service: node
+            annotations:
+              summary: "High CPU usage detected"
+              description: "CPU usage is {{ $value | printf \"%.1f\" }}% (threshold: 80%)"
+
+          # Critical CPU Usage
+          - alert: CriticalCPUUsage
+            expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+            for: 5m
+            labels:
+              severity: critical
+              service: node
+            annotations:
+              summary: "Critical CPU usage!"
+              description: "CPU usage is {{ $value | printf \"%.1f\" }}% (threshold: 95%)"
+
+          # High Memory Usage
+          - alert: HighMemoryUsage
+            expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+            for: 10m
+            labels:
+              severity: warning
+              service: node
+            annotations:
+              summary: "High memory usage detected"
+              description: "Memory usage is {{ $value | printf \"%.1f\" }}% (threshold: 80%)"
+
+          # Critical Memory Usage
+          - alert: CriticalMemoryUsage
+            expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+            for: 5m
+            labels:
+              severity: critical
+              service: node
+            annotations:
+              summary: "Critical memory usage!"
+              description: "Memory usage is {{ $value | printf \"%.1f\" }}% (threshold: 95%)"
+
+          # High Disk Usage
+          - alert: HighDiskUsage
+            expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 80
+            for: 10m
+            labels:
+              severity: warning
+              service: node
+            annotations:
+              summary: "High disk usage detected"
+              description: "Disk usage is {{ $value | printf \"%.1f\" }}% (threshold: 80%)"
+

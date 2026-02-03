@@ -264,39 +264,59 @@ kind-test:
 # Monitoring (Prometheus + Grafana) - M5
 # ============================================
 
-# Deploy Prometheus, Node Exporter, and Grafana
+# Deploy full monitoring stack (Prometheus + Grafana + Alerting)
 monitoring-deploy:
-	@echo "Deploying monitoring stack..."
-	@echo "1. Deploying Prometheus..."
+	@echo "========================================="
+	@echo "🚀 Deploying Full Monitoring Stack"
+	@echo "========================================="
+	@echo ""
+	@echo "1️⃣  Deploying Prometheus Alert Rules..."
+	kubectl apply -f deploy/k8s/prometheus-alerts.yaml
+	@echo "2️⃣  Deploying Prometheus..."
 	kubectl apply -f deploy/k8s/prometheus.yaml
-	@echo "2. Deploying Node Exporter (OS metrics)..."
+	@echo "3️⃣  Deploying Kube State Metrics..."
+	kubectl apply -f deploy/k8s/kube-state-metrics.yaml
+	@echo "4️⃣  Deploying Node Exporter (OS metrics)..."
 	kubectl apply -f deploy/k8s/node-exporter.yaml
-	@echo "3. Deploying Grafana dashboards..."
+	@echo "5️⃣  Deploying AlertManager..."
+	kubectl apply -f deploy/k8s/alertmanager.yaml
+	@echo "6️⃣  Deploying Grafana Dashboards..."
 	kubectl apply -f deploy/k8s/grafana-dashboard.yaml
-	@echo "4. Deploying Grafana..."
+	@echo "7️⃣  Deploying Grafana..."
 	kubectl apply -f deploy/k8s/grafana.yaml
 	@echo ""
-	@echo "Waiting for monitoring pods..."
+	@echo "⏳ Waiting for monitoring pods..."
 	kubectl wait --for=condition=ready pod -l app=prometheus -n mlops --timeout=120s || true
+	kubectl wait --for=condition=ready pod -l app=kube-state-metrics -n mlops --timeout=120s || true
 	kubectl wait --for=condition=ready pod -l app=node-exporter -n mlops --timeout=120s || true
+	kubectl wait --for=condition=ready pod -l app=alertmanager -n mlops --timeout=120s || true
 	kubectl wait --for=condition=ready pod -l app=grafana -n mlops --timeout=120s || true
 	@echo ""
-	@echo "✅ Monitoring stack deployed!"
+	@echo "========================================="
+	@echo "✅ Monitoring Stack Deployed!"
+	@echo "========================================="
 	@echo ""
-	@echo "📊 Prometheus: http://localhost:9090"
-	@echo "📈 Grafana:    http://localhost:3000"
+	@echo "📊 Prometheus:    http://localhost:9090"
+	@echo "🔔 AlertManager:  http://localhost:9093"
+	@echo "📈 Grafana:       http://localhost:3000"
 	@echo ""
-	@echo "Grafana Login: admin / admin123"
+	@echo "🔑 Grafana Login: admin / admin123"
+	@echo ""
+	@echo "⚠️  IMPORTANT: Configure Gmail in AlertManager!"
+	@echo "   Edit deploy/k8s/alertmanager.yaml with your credentials"
 	@echo ""
 	kubectl get pods -n mlops
 
 # Check monitoring status
 monitoring-status:
-	@echo "=== Monitoring Pods ==="
-	kubectl get pods -n mlops -l 'app in (prometheus,grafana)'
+	@echo "=== 📊 Monitoring Pods ==="
+	kubectl get pods -n mlops -l 'app in (prometheus,grafana,alertmanager,kube-state-metrics,node-exporter)'
 	@echo ""
-	@echo "=== Monitoring Services ==="
-	kubectl get svc -n mlops -l 'app in (prometheus,grafana)'
+	@echo "=== 🌐 Monitoring Services ==="
+	kubectl get svc -n mlops | grep -E "prometheus|grafana|alertmanager|kube-state|node-exporter"
+	@echo ""
+	@echo "=== 🔔 Active Alerts ==="
+	curl -s http://localhost:9090/api/v1/alerts 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Firing: {len([a for a in d.get(\"data\",{}).get(\"alerts\",[]) if a.get(\"state\")==\"firing\"])}') if d.get('status')=='success' else print('Prometheus not accessible')" || echo "Cannot connect to Prometheus"
 
 # View Prometheus logs
 prometheus-logs:
@@ -306,17 +326,36 @@ prometheus-logs:
 grafana-logs:
 	kubectl logs -l app=grafana -n mlops -f --tail=50
 
-# Delete monitoring stack
-monitoring-delete:
-	kubectl delete -f deploy/k8s/grafana.yaml --ignore-not-found
-	kubectl delete -f deploy/k8s/grafana-dashboard.yaml --ignore-not-found
-	kubectl delete -f deploy/k8s/node-exporter.yaml --ignore-not-found
-	kubectl delete -f deploy/k8s/prometheus.yaml --ignore-not-found
-	@echo "✅ Monitoring deleted"
+# View AlertManager logs
+alertmanager-logs:
+	kubectl logs -l app=alertmanager -n mlops -f --tail=50
 
 # View Node Exporter logs
 node-exporter-logs:
 	kubectl logs -l app=node-exporter -n mlops -f --tail=50
+
+# View Kube State Metrics logs
+kube-state-metrics-logs:
+	kubectl logs -l app=kube-state-metrics -n mlops -f --tail=50
+
+# Check alert rules
+alerts-status:
+	@echo "=== 🔔 Prometheus Alert Rules ==="
+	curl -s http://localhost:9090/api/v1/rules 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); [print(f'  - {r[\"name\"]}') for g in d.get('data',{}).get('groups',[]) for r in g.get('rules',[])]" || echo "Cannot connect to Prometheus"
+	@echo ""
+	@echo "=== 🚨 Firing Alerts ==="
+	curl -s http://localhost:9093/api/v2/alerts 2>/dev/null | python3 -c "import sys,json; alerts=json.load(sys.stdin); [print(f'  🔴 {a[\"labels\"][\"alertname\"]} ({a[\"labels\"].get(\"severity\",\"unknown\")})') for a in alerts] if alerts else print('  ✅ No alerts firing')" || echo "Cannot connect to AlertManager"
+
+# Delete monitoring stack
+monitoring-delete:
+	kubectl delete -f deploy/k8s/grafana.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/grafana-dashboard.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/alertmanager.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/node-exporter.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/kube-state-metrics.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/prometheus-alerts.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/prometheus.yaml --ignore-not-found
+	@echo "✅ Monitoring stack deleted"
 
 # Full stack: API + Monitoring
 kind-full: kind-up monitoring-deploy
@@ -325,9 +364,10 @@ kind-full: kind-up monitoring-deploy
 	@echo "✅ Full MLOps Stack Running!"
 	@echo "========================================="
 	@echo ""
-	@echo "🌐 API:        http://localhost:8000"
-	@echo "📊 Prometheus: http://localhost:9090"
-	@echo "📈 Grafana:    http://localhost:3000"
+	@echo "🌐 API:          http://localhost:8000"
+	@echo "📊 Prometheus:   http://localhost:9090"
+	@echo "🔔 AlertManager: http://localhost:9093"
+	@echo "📈 Grafana:      http://localhost:3000"
 	@echo ""
 	@echo "Grafana Login: admin / admin123"
 
