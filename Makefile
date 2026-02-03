@@ -39,6 +39,9 @@ help:
 	@echo "=== Other ==="
 	@echo "  make mlflow-ui       - Start MLflow UI"
 	@echo "  make clean           - Clean up generated files"
+	@echo ""
+	@echo "=== Submission ==="
+	@echo "  make submission-zip  - Create ZIP file for assignment submission"
 
 # Environment setup
 init:
@@ -427,4 +430,43 @@ clean:
 	rm -rf __pycache__ .pytest_cache htmlcov .coverage
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
+# =========================================
+# Submission
+# =========================================
+
+# Create submission ZIP file
+submission-zip:
+	@echo "========================================="
+	@echo "📦 Creating Submission ZIP File"
+	@echo "========================================="
+	@echo ""
+	@echo "1️⃣  Cleaning up temporary files..."
+	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	@rm -f mlops-assignment2-submission.zip 2>/dev/null || true
+	@echo ""
+	@echo "2️⃣  Creating ZIP file (excluding large/unnecessary files)..."
+	@zip -r mlops-assignment2-submission.zip . \
+		-x "*.git*" \
+		-x "*venv/*" \
+		-x "*__pycache__/*" \
+		-x "*.pyc" \
+		-x "*mlruns/*" \
+		-x "*data/raw/*" \
+		-x "*.DS_Store" \
+		-x "*node_modules/*" \
+		-x "*.zip" \
+		-x "*/.venv/*"
+	@echo ""
+	@echo "========================================="
+	@echo "✅ Submission ZIP created!"
+	@echo "========================================="
+	@echo ""
+	@ls -lh mlops-assignment2-submission.zip
+	@echo ""
+	@echo "📁 Contents summary:"
+	@unzip -l mlops-assignment2-submission.zip | tail -1
+	@echo ""
+	@echo "📧 Submit this file along with your screen recording."
 
