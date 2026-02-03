@@ -181,10 +181,10 @@ pipeline {
                 expression { return !params.SKIP_DOCKER }
             }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'ghcr-credentials', usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')]) {
+                withCredentials([string(credentialsId: 'ghcr-token', variable: 'GHCR_TOKEN')]) {
                     sh '''
                         echo "Logging in to GHCR..."
-                        echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin
+                        echo $GHCR_TOKEN | docker login ghcr.io -u 2024aa05820 --password-stdin
 
                         echo "Pushing Docker image..."
                         docker push ${REGISTRY}/${IMAGE_NAME}:${BUILD_NUMBER}
