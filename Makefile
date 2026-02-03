@@ -261,6 +261,62 @@ kind-test:
 	@echo "✅ API tests complete"
 
 # ============================================
+# Monitoring (Prometheus + Grafana) - M5
+# ============================================
+
+# Deploy Prometheus and Grafana
+monitoring-deploy:
+	@echo "Deploying Prometheus and Grafana..."
+	kubectl apply -f deploy/k8s/prometheus.yaml
+	kubectl apply -f deploy/k8s/grafana-dashboard.yaml
+	kubectl apply -f deploy/k8s/grafana.yaml
+	@echo "Waiting for monitoring pods..."
+	kubectl wait --for=condition=ready pod -l app=prometheus -n mlops --timeout=120s || true
+	kubectl wait --for=condition=ready pod -l app=grafana -n mlops --timeout=120s || true
+	@echo ""
+	@echo "✅ Monitoring deployed!"
+	@echo "📊 Prometheus: http://localhost:9090"
+	@echo "📈 Grafana:    http://localhost:3000 (admin/admin123)"
+	@echo ""
+	kubectl get pods -n mlops
+
+# Check monitoring status
+monitoring-status:
+	@echo "=== Monitoring Pods ==="
+	kubectl get pods -n mlops -l 'app in (prometheus,grafana)'
+	@echo ""
+	@echo "=== Monitoring Services ==="
+	kubectl get svc -n mlops -l 'app in (prometheus,grafana)'
+
+# View Prometheus logs
+prometheus-logs:
+	kubectl logs -l app=prometheus -n mlops -f --tail=50
+
+# View Grafana logs
+grafana-logs:
+	kubectl logs -l app=grafana -n mlops -f --tail=50
+
+# Delete monitoring stack
+monitoring-delete:
+	kubectl delete -f deploy/k8s/grafana.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/grafana-dashboard.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/prometheus.yaml --ignore-not-found
+	@echo "✅ Monitoring deleted"
+
+# Full stack: API + Monitoring
+kind-full: kind-up monitoring-deploy
+	@echo ""
+	@echo "========================================="
+	@echo "✅ Full MLOps Stack Running!"
+	@echo "========================================="
+	@echo ""
+	@echo "🌐 API:        http://localhost:8000"
+	@echo "📊 Prometheus: http://localhost:9090"
+	@echo "📈 Grafana:    http://localhost:3000"
+	@echo ""
+	@echo "Grafana Login: admin / admin123"
+
+# ============================================
 # Legacy Kubernetes commands
 # ============================================
 
