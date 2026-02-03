@@ -1,18 +1,25 @@
 # Kind cluster configuration for local Kubernetes
-# Maps port 30080 to localhost:8000 for easy API access
+# Port mappings for all services
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: mlops-cluster
 nodes:
   - role: control-plane
     extraPortMappings:
+      # API Service
       - containerPort: 30080
         hostPort: 8000
         protocol: TCP
+      # Prometheus
       - containerPort: 30090
         hostPort: 9090
         protocol: TCP
+      # Grafana
       - containerPort: 30030
         hostPort: 3000
+        protocol: TCP
+      # AlertManager
+      - containerPort: 30093
+        hostPort: 9093
         protocol: TCP
 
