@@ -8,6 +8,22 @@ data:
   alert-rules.yml: |
     groups:
       # ============================================
+      # Test Alert - Always Fires (for testing)
+      # ============================================
+      - name: test-alerts
+        rules:
+          # Test Alert - Always fires immediately
+          - alert: TestAlert
+            expr: vector(1)
+            for: 10s
+            labels:
+              severity: warning
+              service: test
+            annotations:
+              summary: "🧪 Test Alert - System Working!"
+              description: "This is a test alert to verify the alerting pipeline is working correctly."
+
+      # ============================================
       # Application Alerts - Cats vs Dogs API
       # ============================================
       - name: application-alerts
