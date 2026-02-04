@@ -36,6 +36,12 @@ help:
 	@echo "  make kind-restart    - Restart deployment"
 	@echo "  make kind-shell      - Shell into a pod"
 	@echo ""
+	@echo "=== Stop Services ==="
+	@echo "  make monitoring-stop - Stop monitoring (Prometheus, Grafana, AlertManager)"
+	@echo "  make app-stop        - Stop application (API deployment)"
+	@echo "  make all-stop        - Stop everything (keep cluster running)"
+	@echo "  make kind-delete     - Delete entire Kind cluster"
+	@echo ""
 	@echo "=== Other ==="
 	@echo "  make mlflow-ui       - Start MLflow UI"
 	@echo "  make clean           - Clean up generated files"
@@ -320,6 +326,49 @@ monitoring-status:
 	@echo ""
 	@echo "=== 🔔 Active Alerts ==="
 	curl -s http://localhost:9090/api/v1/alerts 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Firing: {len([a for a in d.get(\"data\",{}).get(\"alerts\",[]) if a.get(\"state\")==\"firing\"])}') if d.get('status')=='success' else print('Prometheus not accessible')" || echo "Cannot connect to Prometheus"
+
+# Stop monitoring stack (Prometheus, Grafana, AlertManager, etc.)
+monitoring-stop:
+	@echo "========================================="
+	@echo "🛑 Stopping Monitoring Stack"
+	@echo "========================================="
+	@echo ""
+	@echo "1️⃣  Stopping AlertManager..."
+	kubectl delete -f deploy/k8s/alertmanager.yaml --ignore-not-found
+	@echo "2️⃣  Stopping Grafana..."
+	kubectl delete -f deploy/k8s/grafana.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/grafana-dashboard.yaml --ignore-not-found
+	@echo "3️⃣  Stopping Prometheus..."
+	kubectl delete -f deploy/k8s/prometheus.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/prometheus-alerts.yaml --ignore-not-found
+	@echo "4️⃣  Stopping Node Exporter..."
+	kubectl delete -f deploy/k8s/node-exporter.yaml --ignore-not-found
+	@echo "5️⃣  Stopping Kube State Metrics..."
+	kubectl delete -f deploy/k8s/kube-state-metrics.yaml --ignore-not-found
+	@echo ""
+	@echo "✅ Monitoring stack stopped!"
+
+# Stop application (API deployment)
+app-stop:
+	@echo "========================================="
+	@echo "🛑 Stopping Application"
+	@echo "========================================="
+	kubectl delete -f deploy/k8s/hpa.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/deployment.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/service.yaml --ignore-not-found
+	kubectl delete -f deploy/k8s/configmap.yaml --ignore-not-found
+	@echo ""
+	@echo "✅ Application stopped!"
+
+# Stop everything (monitoring + app) but keep cluster
+all-stop: monitoring-stop app-stop
+	@echo ""
+	@echo "========================================="
+	@echo "✅ All Services Stopped!"
+	@echo "========================================="
+	@echo ""
+	@echo "💡 Cluster is still running. To delete cluster:"
+	@echo "   make kind-delete"
 
 # View Prometheus logs
 prometheus-logs:
