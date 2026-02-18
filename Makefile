@@ -509,7 +509,9 @@ submission-zip:
 		-x "data/raw/*" \
 		-x "data/processed/*" \
 		-x "*data/processed/*" \
+		-x "*.dvc" \
 		-x "data/*.dvc" \
+		-x ".dvc/*" \
 		-x "*.DS_Store" \
 		-x "*node_modules/*" \
 		-x "*.zip" \
@@ -525,8 +527,13 @@ submission-zip:
 		-x "*test_images/*" \
 		-x "*.html" \
 		-x "mlflow.db" \
+		-x "*mlflow.db" \
 		-x "*.log" \
-		-x "README_BACKUP.md"
+		-x "README_BACKUP.md" \
+		-x "htmlcov/*" \
+		-x "*htmlcov/*" \
+		-x ".coverage" \
+		-x "*.coverage"
 	@echo ""
 	@echo "========================================="
 	@echo "✅ Submission ZIP created!"
