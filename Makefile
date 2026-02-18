@@ -495,7 +495,7 @@ submission-zip:
 	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
 	@rm -f mlops-assignment2-submission.zip 2>/dev/null || true
 	@echo ""
-	@echo "2️⃣  Creating ZIP file (excluding large/unnecessary files)..."
+	@echo "2️⃣  Creating ZIP file (excluding data files)..."
 	@zip -r mlops-assignment2-submission.zip . \
 		-x "*.git*" \
 		-x ".git/*" \
@@ -503,37 +503,11 @@ submission-zip:
 		-x ".venv/*" \
 		-x "*__pycache__/*" \
 		-x "*.pyc" \
-		-x "*mlruns/*" \
-		-x "mlruns/*" \
-		-x "*data/raw/*" \
 		-x "data/raw/*" \
 		-x "data/processed/*" \
-		-x "*data/processed/*" \
-		-x "*.dvc" \
-		-x "data/*.dvc" \
-		-x ".dvc/*" \
 		-x "*.DS_Store" \
-		-x "*node_modules/*" \
 		-x "*.zip" \
-		-x "models/*.pt" \
-		-x "models/*.pth" \
-		-x "*models/*.pt" \
-		-x "*models/*.pth" \
-		-x "*.pt" \
-		-x "*.pth" \
-		-x "reports/*.png" \
-		-x "*reports/*.png" \
-		-x "test_images/*" \
-		-x "*test_images/*" \
-		-x "*.html" \
-		-x "mlflow.db" \
-		-x "*mlflow.db" \
-		-x "*.log" \
-		-x "README_BACKUP.md" \
-		-x "htmlcov/*" \
-		-x "*htmlcov/*" \
-		-x ".coverage" \
-		-x "*.coverage"
+		-x "kaggle.json"
 	@echo ""
 	@echo "========================================="
 	@echo "✅ Submission ZIP created!"
