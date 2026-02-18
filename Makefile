@@ -498,15 +498,35 @@ submission-zip:
 	@echo "2️⃣  Creating ZIP file (excluding large/unnecessary files)..."
 	@zip -r mlops-assignment2-submission.zip . \
 		-x "*.git*" \
+		-x ".git/*" \
 		-x "*venv/*" \
+		-x ".venv/*" \
 		-x "*__pycache__/*" \
 		-x "*.pyc" \
 		-x "*mlruns/*" \
+		-x "mlruns/*" \
 		-x "*data/raw/*" \
+		-x "data/raw/*" \
+		-x "data/processed/*" \
+		-x "*data/processed/*" \
+		-x "data/*.dvc" \
 		-x "*.DS_Store" \
 		-x "*node_modules/*" \
 		-x "*.zip" \
-		-x "*/.venv/*"
+		-x "models/*.pt" \
+		-x "models/*.pth" \
+		-x "*models/*.pt" \
+		-x "*models/*.pth" \
+		-x "*.pt" \
+		-x "*.pth" \
+		-x "reports/*.png" \
+		-x "*reports/*.png" \
+		-x "test_images/*" \
+		-x "*test_images/*" \
+		-x "*.html" \
+		-x "mlflow.db" \
+		-x "*.log" \
+		-x "README_BACKUP.md"
 	@echo ""
 	@echo "========================================="
 	@echo "✅ Submission ZIP created!"
