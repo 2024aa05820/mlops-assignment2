@@ -497,8 +497,8 @@ submission-zip:
 	@echo ""
 	@echo "2️⃣  Creating ZIP file (excluding data files)..."
 	@zip -r mlops-assignment2-submission.zip . \
-		-x "*.git*" \
 		-x ".git/*" \
+		-x ".gitignore" \
 		-x "*venv/*" \
 		-x ".venv/*" \
 		-x "*__pycache__/*" \
