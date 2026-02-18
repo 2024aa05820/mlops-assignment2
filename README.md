@@ -48,42 +48,19 @@ Binary image classification system for a pet adoption platform to automatically 
 
 ```mermaid
 flowchart LR
-    subgraph M1["M1: Development"]
-        DEV["👨‍💻 Code"] --> DVC["📦 DVC"]
-        DVC --> TRAIN["🧠 Train"]
-        TRAIN --> MLFLOW["📈 MLflow"]
-    end
+    M1["🧠 M1<br/>Development"]
+    M2["🐳 M2<br/>Packaging"]
+    M3["⚙️ M3<br/>CI Pipeline"]
+    M4["☸️ M4<br/>Deployment"]
+    M5["📊 M5<br/>Monitoring"]
 
-    subgraph M2["M2: Packaging"]
-        API["🌐 FastAPI"] --> DOCKER["🐳 Docker"]
-    end
+    M1 --> M2 --> M3 --> M4 --> M5
 
-    subgraph M3["M3: CI"]
-        GIT["📂 Git"] --> JENKINS["⚙️ Jenkins"]
-        JENKINS --> BUILD["🔨 Build"]
-        BUILD --> GHCR["📦 GHCR"]
-    end
-
-    subgraph M4["M4: CD"]
-        KIND["☸️ Kind"] --> K8S["🚀 Deploy"]
-        K8S --> SMOKE["🔥 Tests"]
-    end
-
-    subgraph M5["M5: Monitoring"]
-        PROM["📊 Prometheus"] --> ALERT["🔔 Alerts"]
-        PROM --> GRAF["📈 Grafana"]
-    end
-
-    MLFLOW --> API
-    DOCKER --> GIT
-    GHCR --> KIND
-    SMOKE --> PROM
-
-    style M1 fill:#e3f2fd,stroke:#1565c0
-    style M2 fill:#fff8e1,stroke:#f9a825
-    style M3 fill:#e8f5e9,stroke:#2e7d32
-    style M4 fill:#fce4ec,stroke:#c2185b
-    style M5 fill:#f3e5f5,stroke:#7b1fa2
+    style M1 fill:#e3f2fd,stroke:#1565c0,color:#000
+    style M2 fill:#fff8e1,stroke:#f9a825,color:#000
+    style M3 fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style M4 fill:#fce4ec,stroke:#c2185b,color:#000
+    style M5 fill:#f3e5f5,stroke:#7b1fa2,color:#000
 ```
 
 ---
@@ -299,41 +276,29 @@ open http://localhost:5000
 **SimpleCNN** - Lightweight CNN optimized for binary classification (~422K parameters):
 
 ```mermaid
-flowchart TB
-    subgraph Input["📷 Input"]
-        I[/"224 × 224 × 3"/]
-    end
+flowchart LR
+    A["📷 Input<br/>224×224×3"] --> B["🔷 Conv Blocks<br/>3→32→64→128→256"]
+    B --> C["🔹 GlobalAvgPool<br/>256"]
+    C --> D["🟣 FC Layers<br/>256→128→2"]
+    D --> E["🎯 Output<br/>Cat | Dog"]
 
-    subgraph ConvBlocks["🔷 Convolutional Blocks"]
-        C1["Conv2D 3→32 + BN + ReLU + MaxPool<br/>↓ 112×112×32"]
-        C2["Conv2D 32→64 + BN + ReLU + MaxPool<br/>↓ 56×56×64"]
-        C3["Conv2D 64→128 + BN + ReLU + MaxPool<br/>↓ 28×28×128"]
-        C4["Conv2D 128→256 + BN + ReLU + MaxPool<br/>↓ 14×14×256"]
-    end
-
-    subgraph Pool["🔹 Pooling"]
-        GAP["AdaptiveAvgPool2D → 256"]
-    end
-
-    subgraph FC["🟣 Fully Connected"]
-        FC1["Linear 256→128 + ReLU"]
-        D1["Dropout 0.5"]
-        FC2["Linear 128→2"]
-    end
-
-    subgraph Output["🎯 Output"]
-        O[/"Softmax: Cat | Dog"/]
-    end
-
-    I --> C1 --> C2 --> C3 --> C4
-    C4 --> GAP --> FC1 --> D1 --> FC2 --> O
-
-    style Input fill:#e1f5fe,stroke:#01579b
-    style ConvBlocks fill:#fff3e0,stroke:#e65100
-    style Pool fill:#e8f5e9,stroke:#2e7d32
-    style FC fill:#f3e5f5,stroke:#7b1fa2
-    style Output fill:#ffebee,stroke:#c62828
+    style A fill:#e1f5fe,stroke:#01579b,color:#000
+    style B fill:#fff3e0,stroke:#e65100,color:#000
+    style C fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style D fill:#f3e5f5,stroke:#7b1fa2,color:#000
+    style E fill:#ffebee,stroke:#c62828,color:#000
 ```
+
+**Layer Details:**
+| Layer | Output Shape | Parameters |
+|-------|--------------|------------|
+| Conv Block 1 | 112×112×32 | 896 |
+| Conv Block 2 | 56×56×64 | 18,496 |
+| Conv Block 3 | 28×28×128 | 73,856 |
+| Conv Block 4 | 14×14×256 | 295,168 |
+| Global Avg Pool | 256 | 0 |
+| FC1 + Dropout | 128 | 32,896 |
+| FC2 (Output) | 2 | 258 |
 
 ### MLflow Tracked Metrics
 
@@ -416,35 +381,23 @@ make docker-stop
 
 ```mermaid
 flowchart LR
-    subgraph CI["🔧 Continuous Integration"]
-        S1["1️⃣ Checkout"]
-        S2["2️⃣ Setup<br/>Python"]
-        S3["3️⃣ Lint"]
-        S4["4️⃣ Unit<br/>Tests"]
-        S5["5️⃣ Download<br/>Data"]
-        S6["6️⃣ Train<br/>Model"]
-        S7["7️⃣ Validate<br/>Model"]
-        S8["8️⃣ Docker<br/>Build"]
-        S9["9️⃣ Docker<br/>Push"]
+    subgraph CI["🔧 CI"]
+        A[Checkout] --> B[Setup] --> C[Lint] --> D[Test]
+        D --> E[Train] --> F[Validate] --> G[Build] --> H[Push]
     end
-
-    subgraph CD["🚀 Continuous Deployment"]
-        S10["🔟 Deploy<br/>to K8s"]
-        S11["1️⃣1️⃣ Smoke<br/>Tests"]
+    subgraph CD["🚀 CD"]
+        I[Deploy] --> J[Smoke Test]
     end
-
-    S1 --> S2 --> S3 --> S4
-    S4 --> S5 --> S6 --> S7
-    S7 --> S8 --> S9 --> S10 --> S11
-
-    S11 -->|Pass| SUCCESS["✅ Success"]
-    S11 -->|Fail| FAIL["❌ Rollback"]
+    H --> I
+    J --> K{Result}
+    K -->|Pass| L["✅ Done"]
+    K -->|Fail| M["❌ Rollback"]
 
     style CI fill:#e8f5e9,stroke:#2e7d32
     style CD fill:#fff3e0,stroke:#e65100
-    style SUCCESS fill:#c8e6c9,stroke:#2e7d32
-    style FAIL fill:#ffcdd2,stroke:#c62828
 ```
+
+**11 Stages:** Checkout → Setup Python → Lint → Unit Tests → Download Data → Train → Validate → Docker Build → Push → Deploy → Smoke Tests
 
 ---
 
@@ -508,59 +461,25 @@ make kind-down
 ### Kubernetes Deployment Architecture
 
 ```mermaid
-flowchart TB
-    subgraph External["🌐 External Access"]
-        USER["👤 User"]
+flowchart LR
+    subgraph Client
+        U["👤 User"]
     end
-
-    subgraph Ports["📡 NodePort Services"]
-        P8000[":8000 API"]
-        P9090[":9090 Prometheus"]
-        P9093[":9093 AlertManager"]
-        P3000[":3000 Grafana"]
+    subgraph Cluster["☸️ Kind Cluster"]
+        SVC["Service"] --> P1["Pod 1"]
+        SVC --> P2["Pod 2"]
+        PROM["Prometheus"] --> GRAF["Grafana"]
+        PROM --> AM["AlertManager"]
     end
+    U -->|:8000| SVC
+    U -->|:9090| PROM
+    U -->|:3000| GRAF
+    P1 & P2 -.->|metrics| PROM
 
-    subgraph Kind["☸️ Kind Cluster - Namespace: mlops"]
-        subgraph App["🚀 Application"]
-            DEP["Deployment<br/>cats-dogs-api"]
-            POD1["Pod 1"]
-            POD2["Pod 2"]
-            SVC["Service"]
-            HPA["HPA 1-5"]
-        end
-
-        subgraph Mon["📊 Monitoring"]
-            PROM["Prometheus"]
-            AM["AlertManager"]
-            GRAF["Grafana"]
-        end
-
-        subgraph Metrics["📈 Collectors"]
-            NE["Node Exporter"]
-            KSM["Kube-State-Metrics"]
-        end
-    end
-
-    USER --> P8000 & P9090 & P9093 & P3000
-    P8000 --> SVC --> POD1 & POD2
-    DEP --> POD1 & POD2
-    HPA -.-> DEP
-
-    P9090 --> PROM
-    P9093 --> AM
-    P3000 --> GRAF
-
-    POD1 & POD2 -.->|metrics| PROM
-    NE & KSM -.->|metrics| PROM
-    PROM --> AM
-    PROM -.-> GRAF
-
-    style External fill:#e3f2fd,stroke:#1565c0
-    style Kind fill:#fff8e1,stroke:#f9a825
-    style App fill:#e8f5e9,stroke:#2e7d32
-    style Mon fill:#f3e5f5,stroke:#7b1fa2
-    style Metrics fill:#fff3e0,stroke:#e65100
+    style Cluster fill:#fff8e1,stroke:#f9a825
 ```
+
+**Components:** 2 API Pods, Prometheus, Grafana, AlertManager, Node Exporter, Kube-State-Metrics
 
 ---
 
@@ -569,49 +488,29 @@ flowchart TB
 ### Monitoring Architecture
 
 ```mermaid
-flowchart TB
-    subgraph Sources["📊 Metrics Sources"]
-        API["🌐 API :8000"]
-        NE["💻 Node Exporter :9100"]
-        KSM["☸️ Kube-State-Metrics :8080"]
+flowchart LR
+    subgraph Sources["📊 Sources"]
+        API["API"]
+        NE["Node Exporter"]
+        KSM["Kube-State"]
+    end
+    subgraph Prometheus["📈 Prometheus"]
+        P["Scrape & Store"]
+        R["13 Alert Rules"]
+    end
+    subgraph Output["📤 Output"]
+        G["Grafana"]
+        AM["AlertManager"]
+        E["📧 Email"]
     end
 
-    subgraph Prometheus["📈 Prometheus :9090"]
-        SCRAPE["Scrape every 15s"]
-        TSDB[("Time Series DB")]
-        RULES["Alert Rules<br/>13 rules"]
-    end
-
-    subgraph Alerts["🔔 Alert Groups"]
-        AG1["App Alerts (5)"]
-        AG2["K8s Alerts (4)"]
-        AG3["System Alerts (5)"]
-    end
-
-    subgraph AlertManager["⚠️ AlertManager :9093"]
-        RECV["Receive & Group"]
-        ROUTE["Route by Severity"]
-    end
-
-    subgraph Notify["📧 Notifications"]
-        EMAIL["📩 Gmail SMTP"]
-    end
-
-    subgraph Grafana["📊 Grafana :3000"]
-        DASH["Pre-configured<br/>Dashboard"]
-    end
-
-    API & NE & KSM --> SCRAPE --> TSDB
-    TSDB --> RULES --> AG1 & AG2 & AG3
-    AG1 & AG2 & AG3 --> RECV --> ROUTE --> EMAIL
-    TSDB --> DASH
+    API & NE & KSM --> P --> R
+    P --> G
+    R --> AM --> E
 
     style Sources fill:#e3f2fd,stroke:#1565c0
     style Prometheus fill:#fff3e0,stroke:#e65100
-    style Alerts fill:#ffebee,stroke:#c62828
-    style AlertManager fill:#fce4ec,stroke:#c2185b
-    style Notify fill:#e8f5e9,stroke:#2e7d32
-    style Grafana fill:#f3e5f5,stroke:#7b1fa2
+    style Output fill:#e8f5e9,stroke:#2e7d32
 ```
 
 ### Deploy Monitoring Stack
@@ -758,25 +657,12 @@ make kind-logs
 
 ```mermaid
 sequenceDiagram
-    participant C as 👤 Client
-    participant S as 🌐 Service
-    participant P as 🚀 Pod/FastAPI
-    participant M as 🧠 SimpleCNN
-    participant PR as 📊 Prometheus
-
-    C->>S: POST /predict (image.jpg)
-    S->>P: Route to Pod
-    activate P
-    P->>P: Validate & Preprocess
-    P->>M: Forward pass
-    M-->>P: Logits [cat, dog]
-    P->>P: Softmax → Probabilities
-    P->>PR: Record metrics
-    deactivate P
-    P-->>S: JSON Response
-    S-->>C: {"prediction": "cat", "probability": 0.87}
-
-    Note over PR: Scrapes /metrics every 15s
+    Client->>Service: POST /predict
+    Service->>Pod: Route request
+    Pod->>Model: Inference
+    Model-->>Pod: Prediction
+    Pod-->>Client: {prediction, probability}
+    Pod->>Prometheus: Record metrics
 ```
 
 ### Endpoints
