@@ -505,9 +505,12 @@ submission-zip:
 		-x "*.pyc" \
 		-x "data/raw/*" \
 		-x "data/processed/*" \
+		-x ".dvc/cache/*" \
+		-x ".dvc/tmp/*" \
 		-x "*.DS_Store" \
 		-x "*.zip" \
 		-x "kaggle.json"
+	@echo "   ✅ Included .dvc/config and .dvc/.gitignore"
 	@echo ""
 	@echo "========================================="
 	@echo "✅ Submission ZIP created!"
