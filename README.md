@@ -44,6 +44,48 @@ Binary image classification system for a pet adoption platform to automatically 
 - 📈 **Monitoring**: Prometheus + Grafana with custom dashboards
 - 📝 **Structured Logging**: Request/response logging with latency tracking
 
+### End-to-End MLOps Pipeline
+
+```mermaid
+flowchart LR
+    subgraph M1["M1: Development"]
+        DEV["👨‍💻 Code"] --> DVC["📦 DVC"]
+        DVC --> TRAIN["🧠 Train"]
+        TRAIN --> MLFLOW["📈 MLflow"]
+    end
+
+    subgraph M2["M2: Packaging"]
+        API["🌐 FastAPI"] --> DOCKER["🐳 Docker"]
+    end
+
+    subgraph M3["M3: CI"]
+        GIT["📂 Git"] --> JENKINS["⚙️ Jenkins"]
+        JENKINS --> BUILD["🔨 Build"]
+        BUILD --> GHCR["📦 GHCR"]
+    end
+
+    subgraph M4["M4: CD"]
+        KIND["☸️ Kind"] --> K8S["🚀 Deploy"]
+        K8S --> SMOKE["🔥 Tests"]
+    end
+
+    subgraph M5["M5: Monitoring"]
+        PROM["📊 Prometheus"] --> ALERT["🔔 Alerts"]
+        PROM --> GRAF["📈 Grafana"]
+    end
+
+    MLFLOW --> API
+    DOCKER --> GIT
+    GHCR --> KIND
+    SMOKE --> PROM
+
+    style M1 fill:#e3f2fd,stroke:#1565c0
+    style M2 fill:#fff8e1,stroke:#f9a825
+    style M3 fill:#e8f5e9,stroke:#2e7d32
+    style M4 fill:#fce4ec,stroke:#c2185b
+    style M5 fill:#f3e5f5,stroke:#7b1fa2
+```
+
 ---
 
 ## ✅ Milestone Summary
@@ -254,26 +296,43 @@ open http://localhost:5000
 
 ### Model Architecture
 
-**SimpleCNN** - Lightweight CNN optimized for binary classification:
+**SimpleCNN** - Lightweight CNN optimized for binary classification (~422K parameters):
 
-```
-Input (224×224×3)
-    ↓
-Conv Block 1: Conv2D(3→32) + BatchNorm + ReLU + MaxPool → 112×112×32
-    ↓
-Conv Block 2: Conv2D(32→64) + BatchNorm + ReLU + MaxPool → 56×56×64
-    ↓
-Conv Block 3: Conv2D(64→128) + BatchNorm + ReLU + MaxPool → 28×28×128
-    ↓
-Conv Block 4: Conv2D(128→256) + BatchNorm + ReLU + MaxPool → 14×14×256
-    ↓
-Global Average Pooling → 256
-    ↓
-FC(256→128) + ReLU + Dropout(0.5)
-    ↓
-FC(128→2) → Output (cat/dog probabilities)
+```mermaid
+flowchart TB
+    subgraph Input["📷 Input"]
+        I[/"224 × 224 × 3"/]
+    end
 
-Total Parameters: ~422,000
+    subgraph ConvBlocks["🔷 Convolutional Blocks"]
+        C1["Conv2D 3→32 + BN + ReLU + MaxPool<br/>↓ 112×112×32"]
+        C2["Conv2D 32→64 + BN + ReLU + MaxPool<br/>↓ 56×56×64"]
+        C3["Conv2D 64→128 + BN + ReLU + MaxPool<br/>↓ 28×28×128"]
+        C4["Conv2D 128→256 + BN + ReLU + MaxPool<br/>↓ 14×14×256"]
+    end
+
+    subgraph Pool["🔹 Pooling"]
+        GAP["AdaptiveAvgPool2D → 256"]
+    end
+
+    subgraph FC["🟣 Fully Connected"]
+        FC1["Linear 256→128 + ReLU"]
+        D1["Dropout 0.5"]
+        FC2["Linear 128→2"]
+    end
+
+    subgraph Output["🎯 Output"]
+        O[/"Softmax: Cat | Dog"/]
+    end
+
+    I --> C1 --> C2 --> C3 --> C4
+    C4 --> GAP --> FC1 --> D1 --> FC2 --> O
+
+    style Input fill:#e1f5fe,stroke:#01579b
+    style ConvBlocks fill:#fff3e0,stroke:#e65100
+    style Pool fill:#e8f5e9,stroke:#2e7d32
+    style FC fill:#f3e5f5,stroke:#7b1fa2
+    style Output fill:#ffebee,stroke:#c62828
 ```
 
 ### MLflow Tracked Metrics
@@ -355,26 +414,36 @@ make docker-stop
 
 ### Pipeline Stages
 
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  Checkout   │ →  │   Setup     │ →  │    Lint     │
-│             │    │   Python    │    │   & Test    │
-└─────────────┘    └─────────────┘    └─────────────┘
-       ↓
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  Download   │ →  │   Train     │ →  │  Validate   │
-│    Data     │    │   Model     │    │   Model     │
-└─────────────┘    └─────────────┘    └─────────────┘
-       ↓
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Docker    │ →  │   Docker    │ →  │  Deploy to  │
-│   Build     │    │    Push     │    │ Kubernetes  │
-└─────────────┘    └─────────────┘    └─────────────┘
-       ↓
-┌─────────────┐
-│   Smoke     │
-│   Tests     │
-└─────────────┘
+```mermaid
+flowchart LR
+    subgraph CI["🔧 Continuous Integration"]
+        S1["1️⃣ Checkout"]
+        S2["2️⃣ Setup<br/>Python"]
+        S3["3️⃣ Lint"]
+        S4["4️⃣ Unit<br/>Tests"]
+        S5["5️⃣ Download<br/>Data"]
+        S6["6️⃣ Train<br/>Model"]
+        S7["7️⃣ Validate<br/>Model"]
+        S8["8️⃣ Docker<br/>Build"]
+        S9["9️⃣ Docker<br/>Push"]
+    end
+
+    subgraph CD["🚀 Continuous Deployment"]
+        S10["🔟 Deploy<br/>to K8s"]
+        S11["1️⃣1️⃣ Smoke<br/>Tests"]
+    end
+
+    S1 --> S2 --> S3 --> S4
+    S4 --> S5 --> S6 --> S7
+    S7 --> S8 --> S9 --> S10 --> S11
+
+    S11 -->|Pass| SUCCESS["✅ Success"]
+    S11 -->|Fail| FAIL["❌ Rollback"]
+
+    style CI fill:#e8f5e9,stroke:#2e7d32
+    style CD fill:#fff3e0,stroke:#e65100
+    style SUCCESS fill:#c8e6c9,stroke:#2e7d32
+    style FAIL fill:#ffcdd2,stroke:#c62828
 ```
 
 ---
@@ -436,45 +505,113 @@ make kind-down
 | `ConfigMap` | Environment configuration |
 | `HPA` | Auto-scaling (1-5 replicas) |
 
+### Kubernetes Deployment Architecture
+
+```mermaid
+flowchart TB
+    subgraph External["🌐 External Access"]
+        USER["👤 User"]
+    end
+
+    subgraph Ports["📡 NodePort Services"]
+        P8000[":8000 API"]
+        P9090[":9090 Prometheus"]
+        P9093[":9093 AlertManager"]
+        P3000[":3000 Grafana"]
+    end
+
+    subgraph Kind["☸️ Kind Cluster - Namespace: mlops"]
+        subgraph App["🚀 Application"]
+            DEP["Deployment<br/>cats-dogs-api"]
+            POD1["Pod 1"]
+            POD2["Pod 2"]
+            SVC["Service"]
+            HPA["HPA 1-5"]
+        end
+
+        subgraph Mon["📊 Monitoring"]
+            PROM["Prometheus"]
+            AM["AlertManager"]
+            GRAF["Grafana"]
+        end
+
+        subgraph Metrics["📈 Collectors"]
+            NE["Node Exporter"]
+            KSM["Kube-State-Metrics"]
+        end
+    end
+
+    USER --> P8000 & P9090 & P9093 & P3000
+    P8000 --> SVC --> POD1 & POD2
+    DEP --> POD1 & POD2
+    HPA -.-> DEP
+
+    P9090 --> PROM
+    P9093 --> AM
+    P3000 --> GRAF
+
+    POD1 & POD2 -.->|metrics| PROM
+    NE & KSM -.->|metrics| PROM
+    PROM --> AM
+    PROM -.-> GRAF
+
+    style External fill:#e3f2fd,stroke:#1565c0
+    style Kind fill:#fff8e1,stroke:#f9a825
+    style App fill:#e8f5e9,stroke:#2e7d32
+    style Mon fill:#f3e5f5,stroke:#7b1fa2
+    style Metrics fill:#fff3e0,stroke:#e65100
+```
+
 ---
 
 ## M5: Monitoring & Logging
 
 ### Monitoring Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Kind Cluster                              │
-│                                                                  │
-│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐      │
-│  │ Cats-Dogs   │      │ Node        │      │ Kube-State  │      │
-│  │ API (x2)    │      │ Exporter    │      │ Metrics     │      │
-│  │ :8000       │      │ :9100       │      │ :8080       │      │
-│  └──────┬──────┘      └──────┬──────┘      └──────┬──────┘      │
-│         │                    │                    │              │
-│         └────────────────────┼────────────────────┘              │
-│                              │                                   │
-│                              ▼                                   │
-│                     ┌─────────────────┐                          │
-│                     │   Prometheus    │◄─── Alert Rules          │
-│                     │   :9090         │     (13 rules)           │
-│                     └────────┬────────┘                          │
-│                              │                                   │
-│              ┌───────────────┼───────────────┐                   │
-│              │               │               │                   │
-│              ▼               ▼               ▼                   │
-│     ┌─────────────┐  ┌─────────────┐  ┌─────────────┐           │
-│     │  Grafana    │  │AlertManager │  │  Queries    │           │
-│     │  :3000      │  │  :9093      │  │             │           │
-│     └─────────────┘  └──────┬──────┘  └─────────────┘           │
-│                             │                                    │
-└─────────────────────────────┼────────────────────────────────────┘
-                              │
-                              ▼
-                     ┌─────────────┐
-                     │   Gmail     │
-                     │   (SMTP)    │
-                     └─────────────┘
+```mermaid
+flowchart TB
+    subgraph Sources["📊 Metrics Sources"]
+        API["🌐 API :8000"]
+        NE["💻 Node Exporter :9100"]
+        KSM["☸️ Kube-State-Metrics :8080"]
+    end
+
+    subgraph Prometheus["📈 Prometheus :9090"]
+        SCRAPE["Scrape every 15s"]
+        TSDB[("Time Series DB")]
+        RULES["Alert Rules<br/>13 rules"]
+    end
+
+    subgraph Alerts["🔔 Alert Groups"]
+        AG1["App Alerts (5)"]
+        AG2["K8s Alerts (4)"]
+        AG3["System Alerts (5)"]
+    end
+
+    subgraph AlertManager["⚠️ AlertManager :9093"]
+        RECV["Receive & Group"]
+        ROUTE["Route by Severity"]
+    end
+
+    subgraph Notify["📧 Notifications"]
+        EMAIL["📩 Gmail SMTP"]
+    end
+
+    subgraph Grafana["📊 Grafana :3000"]
+        DASH["Pre-configured<br/>Dashboard"]
+    end
+
+    API & NE & KSM --> SCRAPE --> TSDB
+    TSDB --> RULES --> AG1 & AG2 & AG3
+    AG1 & AG2 & AG3 --> RECV --> ROUTE --> EMAIL
+    TSDB --> DASH
+
+    style Sources fill:#e3f2fd,stroke:#1565c0
+    style Prometheus fill:#fff3e0,stroke:#e65100
+    style Alerts fill:#ffebee,stroke:#c62828
+    style AlertManager fill:#fce4ec,stroke:#c2185b
+    style Notify fill:#e8f5e9,stroke:#2e7d32
+    style Grafana fill:#f3e5f5,stroke:#7b1fa2
 ```
 
 ### Deploy Monitoring Stack
@@ -616,6 +753,31 @@ make kind-logs
 ---
 
 ## 🧪 API Documentation
+
+### API Request Flow
+
+```mermaid
+sequenceDiagram
+    participant C as 👤 Client
+    participant S as 🌐 Service
+    participant P as 🚀 Pod/FastAPI
+    participant M as 🧠 SimpleCNN
+    participant PR as 📊 Prometheus
+
+    C->>S: POST /predict (image.jpg)
+    S->>P: Route to Pod
+    activate P
+    P->>P: Validate & Preprocess
+    P->>M: Forward pass
+    M-->>P: Logits [cat, dog]
+    P->>P: Softmax → Probabilities
+    P->>PR: Record metrics
+    deactivate P
+    P-->>S: JSON Response
+    S-->>C: {"prediction": "cat", "probability": 0.87}
+
+    Note over PR: Scrapes /metrics every 15s
+```
 
 ### Endpoints
 
