@@ -78,14 +78,17 @@ mlops-assignment2/
 │   ├── k8s/                 # Kubernetes manifests
 │   │   ├── kind-config.yaml # Kind cluster configuration
 │   │   ├── namespace.yaml   # Namespace definition
-│   │   ├── deployment.yaml  # API deployment
+│   │   ├── deployment.yaml  # API deployment (2 replicas)
 │   │   ├── service.yaml     # NodePort service
 │   │   ├── configmap.yaml   # Environment configuration
 │   │   ├── hpa.yaml         # Horizontal Pod Autoscaler
 │   │   ├── prometheus.yaml  # Prometheus deployment
-│   │   ├── grafana.yaml     # Grafana deployment
+│   │   ├── prometheus-alerts.yaml  # Alert rules (13 rules)
+│   │   ├── alertmanager.yaml       # AlertManager (email notifications)
+│   │   ├── grafana.yaml            # Grafana deployment
 │   │   ├── grafana-dashboard.yaml  # Pre-configured dashboards
-│   │   └── node-exporter.yaml      # OS metrics exporter
+│   │   ├── node-exporter.yaml      # OS metrics (CPU, Memory, Disk)
+│   │   └── kube-state-metrics.yaml # Kubernetes metrics
 │   ├── jenkins/             # Jenkins configuration
 │   └── smoke-test.sh        # Deployment smoke tests
 ├── tests/                   # Unit tests
@@ -94,7 +97,8 @@ mlops-assignment2/
 │   └── test_preprocessing.py # Data preprocessing tests
 ├── scripts/                 # Utility scripts
 │   ├── validate_model.py    # Model validation for CI/CD
-│   └── download_sample_data.py
+│   ├── download_sample_data.py
+│   └── test_alerts.sh       # Alert pipeline testing
 ├── data/                    # Dataset (DVC tracked)
 ├── models/                  # Saved model artifacts
 ├── mlruns/                  # MLflow tracking data
@@ -436,18 +440,117 @@ make kind-down
 
 ## M5: Monitoring & Logging
 
+### Monitoring Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Kind Cluster                              │
+│                                                                  │
+│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐      │
+│  │ Cats-Dogs   │      │ Node        │      │ Kube-State  │      │
+│  │ API (x2)    │      │ Exporter    │      │ Metrics     │      │
+│  │ :8000       │      │ :9100       │      │ :8080       │      │
+│  └──────┬──────┘      └──────┬──────┘      └──────┬──────┘      │
+│         │                    │                    │              │
+│         └────────────────────┼────────────────────┘              │
+│                              │                                   │
+│                              ▼                                   │
+│                     ┌─────────────────┐                          │
+│                     │   Prometheus    │◄─── Alert Rules          │
+│                     │   :9090         │     (13 rules)           │
+│                     └────────┬────────┘                          │
+│                              │                                   │
+│              ┌───────────────┼───────────────┐                   │
+│              │               │               │                   │
+│              ▼               ▼               ▼                   │
+│     ┌─────────────┐  ┌─────────────┐  ┌─────────────┐           │
+│     │  Grafana    │  │AlertManager │  │  Queries    │           │
+│     │  :3000      │  │  :9093      │  │             │           │
+│     └─────────────┘  └──────┬──────┘  └─────────────┘           │
+│                             │                                    │
+└─────────────────────────────┼────────────────────────────────────┘
+                              │
+                              ▼
+                     ┌─────────────┐
+                     │   Gmail     │
+                     │   (SMTP)    │
+                     └─────────────┘
+```
+
 ### Deploy Monitoring Stack
 
 ```bash
-# Deploy Prometheus + Grafana + Node Exporter
+# Deploy full monitoring stack (7 components)
 make monitoring-deploy
+
+# Components deployed:
+# 1. Prometheus (metrics collection)
+# 2. Prometheus Alert Rules (13 alert rules)
+# 3. AlertManager (email notifications)
+# 4. Grafana (visualization)
+# 5. Grafana Dashboard (pre-configured)
+# 6. Node Exporter (OS metrics)
+# 7. Kube-State-Metrics (Kubernetes metrics)
 ```
 
-### Access Grafana
+### Access Monitoring UIs
 
-1. Open http://localhost:3000
-2. Login: `admin` / `admin123`
-3. Dashboard is pre-configured!
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| **Grafana** | http://localhost:3000 | admin / admin123 |
+| **Prometheus** | http://localhost:9090 | - |
+| **AlertManager** | http://localhost:9093 | - |
+
+### Alert Rules (13 Rules)
+
+#### Application Alerts
+| Alert | Trigger | Duration | Severity |
+|-------|---------|----------|----------|
+| `HighPredictionRate` | > 0.5 req/sec | 30s | warning |
+| `HighPredictionErrorRate` | > 0.1 errors/sec | 30s | critical |
+| `HighPredictionLatency` | p95 > 0.5s | 30s | warning |
+| `CriticalPredictionLatency` | p99 > 1s | 30s | critical |
+| `NoPredictions` | No requests | 2m | warning |
+
+#### Kubernetes Alerts
+| Alert | Trigger | Duration | Severity |
+|-------|---------|----------|----------|
+| `PodNotReady` | Pod not ready | 1m | warning |
+| `PodCrashLooping` | Pod restarting | 1m | critical |
+| `DeploymentReplicasMismatch` | Replicas ≠ spec | 1m | warning |
+| `HPAAtMaxCapacity` | HPA at max | 2m | warning |
+
+#### System Alerts (Node Exporter)
+| Alert | Trigger | Duration | Severity |
+|-------|---------|----------|----------|
+| `HighCPUUsage` | CPU > 80% | 1m | warning |
+| `CriticalCPUUsage` | CPU > 95% | 30s | critical |
+| `HighMemoryUsage` | Memory > 80% | 1m | warning |
+| `CriticalMemoryUsage` | Memory > 95% | 30s | critical |
+| `HighDiskUsage` | Disk > 80% | 1m | warning |
+
+### Check Alerts Status
+
+```bash
+# View all alert rules and firing alerts
+make alerts-status
+
+# Test alert pipeline
+make alerts-test
+```
+
+### AlertManager Email Configuration
+
+To receive email alerts, update `deploy/k8s/alertmanager.yaml`:
+
+```yaml
+smtp_from: 'your-email@gmail.com'
+smtp_auth_username: 'your-email@gmail.com'
+smtp_auth_password: 'xxxx xxxx xxxx xxxx'  # Gmail App Password
+to: 'your-email@gmail.com'
+```
+
+> **Note:** Generate Gmail App Password at: https://myaccount.google.com/apppasswords
 
 ### Dashboard Panels
 
@@ -460,6 +563,13 @@ make monitoring-deploy
 | Requests/sec | Request rate |
 | Predictions by Class | Cat vs Dog over time |
 | Latency Percentiles | p50, p95, p99 |
+
+#### Kubernetes Metrics
+| Panel | Description |
+|-------|-------------|
+| Pod Count | Number of running pods |
+| Pod Restarts | Container restart count |
+| Deployment Status | Ready vs desired replicas |
 
 #### System Metrics (OS-Level)
 | Panel | Description |
@@ -679,8 +789,10 @@ curl http://localhost:9090/api/v1/targets
 | Orchestration | Kubernetes (Kind) | Latest |
 | CI/CD | Jenkins | LTS |
 | Monitoring | Prometheus | 2.48 |
+| Alerting | AlertManager | 0.26.0 |
 | Visualization | Grafana | 10.2 |
 | OS Metrics | Node Exporter | 1.7 |
+| K8s Metrics | Kube-State-Metrics | 2.10.1 |
 
 ---
 
