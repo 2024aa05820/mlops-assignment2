@@ -472,7 +472,7 @@ k8s-logs:
 
 # MLflow
 mlflow-ui:
-	mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5050
+	mlflow ui --backend-store-uri mlruns --host 0.0.0.0 --port 5050
 
 # Cleanup
 clean:
