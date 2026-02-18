@@ -392,12 +392,13 @@ make kind-full
 
 ### Access Points
 
-| Service | URL |
-|---------|-----|
-| **API** | http://localhost:8000 |
-| **API Docs** | http://localhost:8000/docs |
-| **Prometheus** | http://localhost:9090 |
-| **Grafana** | http://localhost:3000 |
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| **API** | http://localhost:8000 | - |
+| **API Docs** | http://localhost:8000/docs | - |
+| **Prometheus** | http://localhost:9090 | - |
+| **AlertManager** | http://localhost:9093 | - |
+| **Grafana** | http://localhost:3000 | admin / admin123 |
 
 ### Individual Commands
 
@@ -592,9 +593,23 @@ make kind-restart  # Restart deployment
 ```bash
 make monitoring-deploy   # Deploy Prometheus + Grafana
 make monitoring-status   # Check monitoring pods
-make monitoring-delete   # Remove monitoring stack
 make prometheus-logs     # View Prometheus logs
 make grafana-logs        # View Grafana logs
+make alertmanager-logs   # View AlertManager logs
+make alerts-status       # Check alert rules and firing alerts
+```
+
+### Stop Services
+```bash
+make monitoring-stop     # Stop Prometheus, Grafana, AlertManager
+make app-stop            # Stop API deployment
+make all-stop            # Stop everything (keep cluster running)
+make kind-delete         # Delete entire Kind cluster
+```
+
+### Submission
+```bash
+make submission-zip      # Create ZIP file for assignment submission
 ```
 
 ---
