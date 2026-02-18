@@ -114,7 +114,7 @@ data-setup: download dvc-init dvc-add
 
 # Training
 train:
-	python src/models/train.py
+	KMP_DUPLICATE_LIB_OK=TRUE python src/models/train.py
 
 # API
 serve:
