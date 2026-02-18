@@ -705,69 +705,104 @@ curl -X POST http://localhost:8000/predict \
 
 ### Environment
 ```bash
-make init          # Create venv and install dependencies
-make install       # Install dependencies only
+make init              # Create venv and install dependencies
+make install           # Install dependencies only
+make clean-reinstall   # Remove venv and reinstall from scratch
 ```
 
-### Data
+### Data & DVC
 ```bash
-make download      # Download dataset from Kaggle
-make data-setup    # Full data setup (download + DVC)
+make download          # Download dataset from Kaggle
+make dvc-init          # Initialize DVC
+make dvc-add           # Add data to DVC tracking
+make dvc-push          # Push data to DVC remote
+make dvc-pull          # Pull data from DVC remote
+make data-setup        # Full data setup (download + DVC init + add)
 ```
 
-### Training
+### Training & MLflow
 ```bash
-make train         # Train the model
-make mlflow-ui     # Start MLflow UI
+make train             # Train the model (with MLflow tracking)
+make mlflow-ui         # Start MLflow UI at http://localhost:5000
 ```
 
-### Testing
+### Local Development
 ```bash
-make test          # Run tests with coverage
-make test-quick    # Run tests without coverage
-make lint          # Run linter (ruff)
-make format        # Format code (black + ruff)
+make serve             # Start API server locally (uvicorn)
+```
+
+### Testing & Code Quality
+```bash
+make test              # Run tests with coverage
+make test-quick        # Run tests without coverage
+make lint              # Run linter (ruff)
+make format            # Format code (black + ruff)
 ```
 
 ### Docker
 ```bash
-make docker-build  # Build Docker image
-make docker-run    # Run Docker container
-make docker-stop   # Stop and remove container
+make docker-build      # Build Docker image
+make docker-run        # Run Docker container
+make docker-stop       # Stop and remove container
 ```
 
 ### Kubernetes (Kind)
 ```bash
-make kind-full     # Full stack: cluster + API + monitoring
-make kind-up       # Create cluster and deploy API
-make kind-down     # Delete cluster
-make kind-status   # Check deployment status
-make kind-logs     # View API logs
-make kind-test     # Test API endpoints
-make kind-restart  # Restart deployment
+make kind-install      # Install Kind and kubectl (brew)
+make kind-create       # Create Kind cluster only
+make kind-build        # Build and load image to Kind
+make kind-deploy       # Deploy API to cluster
+make kind-up           # Create cluster + deploy API
+make kind-full         # Full stack: cluster + API + monitoring
+make kind-down         # Delete cluster
+make kind-status       # Check deployment status
+make kind-logs         # View API logs
+make kind-test         # Test API endpoints
+make kind-restart      # Restart deployment
+make kind-shell        # Shell into a pod
+make kind-scale        # Scale deployment replicas
 ```
 
 ### Monitoring
 ```bash
-make monitoring-deploy   # Deploy Prometheus + Grafana
-make monitoring-status   # Check monitoring pods
-make prometheus-logs     # View Prometheus logs
-make grafana-logs        # View Grafana logs
-make alertmanager-logs   # View AlertManager logs
-make alerts-status       # Check alert rules and firing alerts
+make monitoring-deploy     # Deploy full monitoring stack
+make monitoring-status     # Check monitoring pods
+make prometheus-logs       # View Prometheus logs
+make grafana-logs          # View Grafana logs
+make alertmanager-logs     # View AlertManager logs
+make node-exporter-logs    # View Node Exporter logs
+make kube-state-metrics-logs  # View Kube-State-Metrics logs
+make alerts-status         # Check alert rules and firing alerts
+make alerts-test           # Test alert pipeline
 ```
 
 ### Stop Services
 ```bash
-make monitoring-stop     # Stop Prometheus, Grafana, AlertManager
-make app-stop            # Stop API deployment
-make all-stop            # Stop everything (keep cluster running)
-make kind-delete         # Delete entire Kind cluster
+make monitoring-stop       # Stop Prometheus, Grafana, AlertManager
+make app-stop              # Stop API deployment
+make all-stop              # Stop everything (keep cluster running)
+make kind-delete           # Delete entire Kind cluster
 ```
 
-### Submission
+### Cleanup & Submission
 ```bash
-make submission-zip      # Create ZIP file for assignment submission
+make clean                 # Clean up generated files
+make submission-zip        # Create ZIP file for assignment submission
+```
+
+### Jenkins (CI/CD)
+> **Note:** Jenkins commands are run via the Jenkins UI, not Make.
+
+```bash
+# Install Jenkins (Mac)
+brew install jenkins-lts
+brew services start jenkins-lts
+open http://localhost:8080
+
+# Jenkins Pipeline Stages (automated via Jenkinsfile):
+# 1. Checkout → 2. Setup Python → 3. Lint → 4. Unit Tests
+# 5. Download Data → 6. Train Model → 7. Validate Model
+# 8. Docker Build → 9. Docker Push → 10. Deploy to K8s → 11. Smoke Tests
 ```
 
 ---
